@@ -1,9 +1,11 @@
 #pragma once
 
 #include "version.h"
+#include "TimerArrayControl.hpp"
 
-// TODO: implement timer controller for hardware handling,
-//  it encapsulates any hardware related issue and presents a simple common API
-// TODO: implement timer strings to reduce the amount of load on a callback chain
-// TODO: implement one shot timer
-// TODO: implement periodic timer
+// THIS VERSION (V0.1.0) IS NOT INTERRUPT SAFE!!!
+// LIGHTLY TESTED
+
+
+// TODO: make the library interrupt safe
+// or half interrupt safe (by disabling the specific tick interrupt for the TimerArrayControl)

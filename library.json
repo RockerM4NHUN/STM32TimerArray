@@ -15,7 +15,7 @@
     "url": "https://github.com/RockerM4NHUN",
     "maintainer": true
   },
-  "version": "0.0.0",
+  "version": "0.1.0",
   "frameworks": "STM32Cube",
   "platforms": "stm32, ststm32"
 }

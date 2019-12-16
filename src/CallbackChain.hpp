@@ -1,9 +1,11 @@
 #pragma once
 
+#include <functional>
+
 template<typename ChainID, typename ... Args>
 class CallbackChain{
 public:
-    using func = void(*)(Args...);
+    using func = std::function< void(Args...)>;
     CallbackChain(func f);
     static void fire(Args... args);
 protected:

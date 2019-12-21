@@ -68,6 +68,7 @@ public:
     const uint8_t bits;
 
     static const auto TARGET_CC_CHANNEL = TIM_CHANNEL_1;
+    static const auto TARGET_CCIG_FLAG = TIM_EGR_CC1G;
     static const uint8_t prescaler_bits = 16;
     static const auto max_prescale = (1 << prescaler_bits);
 
@@ -89,10 +90,23 @@ public:
 
 protected:
     void tick();
+    void registerAttachedTimer(uint32_t cnt);
+    void registerDetachedTimer();
+    void registerPeriodChange();
 
     TAC_CallbackChain tickCallback;
     TIM_HandleTypeDef *const htim;
     Timer timerString;
+
+    // only one timer and operation flag needed, the request variable has to be atomic rw
+    static const uint8_t REQUEST_NONE = 0;
+    static const uint8_t REQUEST_ATTACH = 1;
+    static const uint8_t REQUEST_DETACH = 2;
+    static const uint8_t REQUEST_PERIOD_CHANGE = 3;
+    volatile uint8_t request;
+    Timer* requestTimer;
+    uint32_t requestPeriod;
+    volatile bool isTickOngoing;
 };
 
 

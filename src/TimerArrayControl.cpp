@@ -1,9 +1,16 @@
 #include "TimerArrayControl.hpp"
 
 // capture update events and fire the timer array's callback chain
+// a single call to tick would suffice in case of one timer array,
+// but this way multiple callback handlers for the same interrupt
+// routine can exist independently, without requiring rewriting
+// the function for the current setup at all times
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim){
     TAC_CallbackChain::fire(htim);
 }
+
+#define __HAL_IS_TIMER_ENABLED(htim) (htim->Instance->CR1 & TIM_CR1_CEN)
+#define __HAL_GENERATE_INTERRUPT(htim, EGR_FLAG) (htim->Instance->EGR |= EGR_FLAG)
 
 // -----                                  -----
 // ----- TimerArrayControl implementation -----
@@ -70,7 +77,7 @@ void TimerArrayControl::tick(){
     switch(request){
         case REQUEST_ATTACH: registerAttachedTimer(cnt); break;
         case REQUEST_DETACH: registerDetachedTimer(); break;
-        case REQUEST_DELAY_CHANGE: registerDelayChange(); break;
+        case REQUEST_DELAY_CHANGE: registerDelayChange(cnt); break;
         default: break;
     }
     request = REQUEST_NONE;
@@ -160,20 +167,40 @@ void TimerArrayControl::registerDetachedTimer(){
     }
 }
 
-void TimerArrayControl::registerDelayChange(){
+void TimerArrayControl::registerDelayChange(uint32_t cnt){
 
     if (!requestTimer->running) {
         requestTimer->delay = requestDelay;
         return;
     }
 
-    requestTimer->target += requestDelay - requestTimer->delay;
-    requestTimer->target &= max_count; 
-    requestTimer->delay = requestDelay;
+    // if there are not more ticks until the current target is reached then
+    // the ticks we try to bring the target early, the new target will be in tha past
+    if ((uint32_t)(max_count & (requestTimer->target - cnt)) <= requestTimer->delay - requestDelay){
+        // the requested delay is already passed, skip the callbacks between the start and now
+        
+        // add the requested delay until the target is in the future
+        // arithmetic magic is necessary for correct handling of both 16 and 32 bit counters
+        requestTimer->target -= requestTimer->delay;
+        do {
+            requestTimer->target += requestDelay;
+            requestTimer->target &= max_count;
+        } while ((uint32_t)(max_count & (cnt - requestTimer->target)) < (max_count >> 1));
+        requestTimer->delay = requestDelay;
+
+    } else {
+        // the new target will be in the future, set it as usual
+        requestTimer->target += requestDelay - requestTimer->delay;
+        requestTimer->target &= max_count;
+        requestTimer->delay = requestDelay;
+    }
+
     
     // find fitting place for timer in string
     Timer* ins = &timerString;
     Timer* rem = ins;
+
+    // search attach position
     while(ins->next && ins->next->target < requestTimer->target){
         // while there are more timers and the next timer's target is sooner than the modified one's
         // advance |ins| on the timer string
@@ -182,13 +209,15 @@ void TimerArrayControl::registerDelayChange(){
         // if the next timer is not our's to remove, advance |rem| on the string
         if (rem->next != requestTimer) rem = ins;
     }
+
+    // search where the timer was, to detach it from that position
     while(rem->next && rem->next != requestTimer) rem = rem->next;
     
-    // if the interrupt was set to a timer that has changed, set new target
-    // if ins is first timer, the timer was put to first place
-    // if rem is first timer, the timer was moved from first place
-    // if both, the first timers target was probably changed
-    // in all cases new target is needed
+    // If the interrupt was set to a timer that has changed, set new target.
+    // If ins is first timer, the timer was put to first place.
+    // If rem is first timer, the timer was moved from first place.
+    // If both, the first timers target was probably changed.
+    // In all cases new target is needed.
     if (&timerString == ins || &timerString == rem) {
         __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, timerString.next->target);
     }
@@ -215,17 +244,13 @@ void TimerArrayControl::attachTimer(Timer* timer){
     requestTimer = timer; // register timer to attach
     request = REQUEST_ATTACH;
 
-    if (htim->Instance->CR1 & TIM_CR1_CEN && !isTickOngoing){
+    if (__HAL_IS_TIMER_ENABLED(htim) && !isTickOngoing){
         // timer is running, use interrupted attach
         
         // generate interrupt to register attached timer
-        htim->Instance->EGR |= TARGET_CCIG_FLAG;
+        __HAL_GENERATE_INTERRUPT(htim, TARGET_CCIG_FLAG);
 
-        // wait for attach to happen
-        // TODO: probably not necessary, can be removed if we are certain
-        // when attach happened, we are done
-        // while(request);
-
+        // don't wait for attach to happen, the interrupt will handle it very quickly
     } else {
         // timer is not running, main thread attach is safe, or we are in tick handler, interrupt attach is safe
         uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
@@ -240,17 +265,13 @@ void TimerArrayControl::detachTimer(Timer* timer){
     requestTimer = timer; // register timer to detach
     request = REQUEST_DETACH;
 
-    if (htim->Instance->CR1 & TIM_CR1_CEN && !isTickOngoing){
+    if (__HAL_IS_TIMER_ENABLED(htim) && !isTickOngoing){
         // timer is running, use interrupted detach
         
         // generate interrupt to register detached timer
-        htim->Instance->EGR |= TARGET_CCIG_FLAG;
+        __HAL_GENERATE_INTERRUPT(htim, TARGET_CCIG_FLAG);
 
-        // wait for detach to happen
-        // TODO: probably not necessary, can be removed if we are certain
-        // when detach happened, we are done
-        // while(request);
-
+        // don't wait for detach to happen, the interrupt will handle it very quickly
     } else {
         // timer is not running, main thread detach is safe
         registerDetachedTimer();
@@ -260,25 +281,25 @@ void TimerArrayControl::detachTimer(Timer* timer){
 }
 
 void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
+
+    // can't handle 0 delay
+    if (delay == 0) return;
     
     requestTimer = timer; // register timer to change delay
     requestDelay = delay;
     request = REQUEST_DELAY_CHANGE;
 
-    if (htim->Instance->CR1 & TIM_CR1_CEN && !isTickOngoing){
+    if (__HAL_IS_TIMER_ENABLED(htim) && !isTickOngoing){
         // timer is running, use interrupted delay change
         
         // generate interrupt to register delay change timer
-        htim->Instance->EGR |= TARGET_CCIG_FLAG;
+        __HAL_GENERATE_INTERRUPT(htim, TARGET_CCIG_FLAG);
 
-        // wait for delay change to happen
-        // TODO: probably not necessary, can be removed if we are certain
-        // when delay change happened, we are done
-        // while(request);
-
+        // don't wait for delay change to happen, the interrupt will handle it very quickly
     } else {
         // timer is not running, main thread delay change is safe
-        registerDelayChange();
+        uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
+        registerDelayChange(cnt);
         request = REQUEST_NONE;
     }
 }

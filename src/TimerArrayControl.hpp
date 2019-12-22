@@ -92,7 +92,7 @@ protected:
     void tick();
     void registerAttachedTimer(uint32_t cnt);
     void registerDetachedTimer();
-    void registerDelayChange();
+    void registerDelayChange(uint32_t cnt);
 
     TAC_CallbackChain tickCallback;
     TIM_HandleTypeDef *const htim;

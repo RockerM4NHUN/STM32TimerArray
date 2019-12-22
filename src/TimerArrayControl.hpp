@@ -15,22 +15,22 @@ using TAC_CallbackChain = CallbackChain<TAC_CallbackChainID, TIM_HandleTypeDef*>
 // Represents a timer, handled by a TimerArrayControl object.
 // Attach it to a controller to receive callbacks.
 //
-// period: ticks of timer array controller until firing
-// isPeriodic: does the timer restart immedietely after firing
+// delay: ticks of timer array controller until firing
+// isPeriodic: does the timer restart immedietely when fires
 // f: function called when timer is firing
 class Timer{
 public:
     using callback_function = void(*)();
     Timer(const callback_function f);
-    Timer(uint32_t period, bool isPeriodic, const callback_function f);
+    Timer(uint32_t delay, bool isPeriodic, const callback_function f);
     
     bool isRunning();
 
-    // Changing the timers period will not affect the current firing event, only the next one.
-    // To restart the timer with the new period detach and attach it.
-    // To change the timer's period without restart, use the changeTimerPeriod method
+    // Changing the timers delay will not affect the current firing event, only the next one.
+    // To restart the timer with the new delay, detach and attach it.
+    // To change the timer's delay without restart, use the changeTimerDelay method
     // in the TimerArrayControl.
-    uint32_t period; // required period of timer (in ticks)
+    uint32_t delay; // required delay of timer (in ticks)
     bool isPeriodic; // should the timer be immedietely restarted after firing
 
 protected:
@@ -61,7 +61,7 @@ public:
     void begin(); // start interrupt generation for the listeners
     void attachTimer(Timer* timer); // add a timer to the array, when it fires, the callback function is called
     void detachTimer(Timer* timer); // remove a timer from the array, stopping the callback event
-    void changeTimerPeriod(Timer* timer, uint32_t period); // change the period of the timer without changing the start time
+    void changeTimerDelay(Timer* timer, uint32_t delay); // change the delay of the timer without changing the start time
 
     const uint32_t fclk;
     const uint32_t clkdiv;
@@ -92,7 +92,7 @@ protected:
     void tick();
     void registerAttachedTimer(uint32_t cnt);
     void registerDetachedTimer();
-    void registerPeriodChange();
+    void registerDelayChange();
 
     TAC_CallbackChain tickCallback;
     TIM_HandleTypeDef *const htim;
@@ -102,10 +102,10 @@ protected:
     static const uint8_t REQUEST_NONE = 0;
     static const uint8_t REQUEST_ATTACH = 1;
     static const uint8_t REQUEST_DETACH = 2;
-    static const uint8_t REQUEST_PERIOD_CHANGE = 3;
+    static const uint8_t REQUEST_DELAY_CHANGE = 3;
     volatile uint8_t request;
     Timer* requestTimer;
-    uint32_t requestPeriod;
+    uint32_t requestDelay;
     volatile bool isTickOngoing;
 };
 

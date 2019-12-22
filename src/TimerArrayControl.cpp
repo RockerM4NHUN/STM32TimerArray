@@ -21,7 +21,7 @@ TimerArrayControl::TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32
     timerString(Timer(nullptr)),
     request(REQUEST_NONE),
     requestTimer(nullptr),
-    requestPeriod(0),
+    requestDelay(0),
     isTickOngoing(false)
 {}
 
@@ -70,7 +70,7 @@ void TimerArrayControl::tick(){
     switch(request){
         case REQUEST_ATTACH: registerAttachedTimer(cnt); break;
         case REQUEST_DETACH: registerDetachedTimer(); break;
-        case REQUEST_PERIOD_CHANGE: registerPeriodChange(); break;
+        case REQUEST_DELAY_CHANGE: registerDelayChange(); break;
         default: break;
     }
     request = REQUEST_NONE;
@@ -83,7 +83,7 @@ void TimerArrayControl::tick(){
         if (timer->isPeriodic){
 
             // set new target for timer
-            timer->target += timer->period;
+            timer->target += timer->delay;
             timer->target &= max_count;
 
             // find fitting place for timer in string
@@ -128,7 +128,7 @@ void TimerArrayControl::registerAttachedTimer(uint32_t cnt){
     if (requestTimer->running) return;
 
     // get current time in ticks and add the requested delay to find the target time
-    requestTimer->target = max_count & (requestTimer->period + cnt);
+    requestTimer->target = max_count & (requestTimer->delay + cnt);
 
     // find fitting place for timer in string
     Timer* it = &timerString;
@@ -160,16 +160,16 @@ void TimerArrayControl::registerDetachedTimer(){
     }
 }
 
-void TimerArrayControl::registerPeriodChange(){
+void TimerArrayControl::registerDelayChange(){
 
     if (!requestTimer->running) {
-        requestTimer->period = requestPeriod;
+        requestTimer->delay = requestDelay;
         return;
     }
 
-    requestTimer->target += requestPeriod - requestTimer->period;
+    requestTimer->target += requestDelay - requestTimer->delay;
     requestTimer->target &= max_count; 
-    requestTimer->period = requestPeriod;
+    requestTimer->delay = requestDelay;
     
     // find fitting place for timer in string
     Timer* ins = &timerString;
@@ -259,26 +259,26 @@ void TimerArrayControl::detachTimer(Timer* timer){
 
 }
 
-void TimerArrayControl::changeTimerPeriod(Timer* timer, uint32_t period){
+void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
     
-    requestTimer = timer; // register timer to change period
-    requestPeriod = period;
-    request = REQUEST_PERIOD_CHANGE;
+    requestTimer = timer; // register timer to change delay
+    requestDelay = delay;
+    request = REQUEST_DELAY_CHANGE;
 
     if (htim->Instance->CR1 & TIM_CR1_CEN && !isTickOngoing){
-        // timer is running, use interrupted period change
+        // timer is running, use interrupted delay change
         
-        // generate interrupt to register period change timer
+        // generate interrupt to register delay change timer
         htim->Instance->EGR |= TARGET_CCIG_FLAG;
 
-        // wait for period change to happen
+        // wait for delay change to happen
         // TODO: probably not necessary, can be removed if we are certain
-        // when period change happened, we are done
+        // when delay change happened, we are done
         // while(request);
 
     } else {
-        // timer is not running, main thread period change is safe
-        registerPeriodChange();
+        // timer is not running, main thread delay change is safe
+        registerDelayChange();
         request = REQUEST_NONE;
     }
 }
@@ -290,11 +290,11 @@ void TimerArrayControl::changeTimerPeriod(Timer* timer, uint32_t period){
 // -----                      -----
 
 Timer::Timer(const callback_function f)
-    : period(10), isPeriodic(false), f(f), running(false), next(nullptr)
+    : delay(10), isPeriodic(false), f(f), running(false), next(nullptr)
 {}
 
-Timer::Timer(uint32_t period, bool isPeriodic, const callback_function f)
-    : period(period), isPeriodic(isPeriodic), f(f), running(false), next(nullptr)
+Timer::Timer(uint32_t delay, bool isPeriodic, const callback_function f)
+    : delay(delay), isPeriodic(isPeriodic), f(f), running(false), next(nullptr)
 {}
 
 bool Timer::isRunning(){

@@ -2,11 +2,11 @@
   "name": "STM32TimerArray",
   "keywords": "stm32, stm32cube, timer, timerarray, hardware, interrupt",
   "description": "Hardware aided timer array for STM32 boards",
-  "license": "bsd-3",
+  "license": "BSD-3-Clause",
   "repository":
   {
     "type": "git",
-    "url": "https://github.com/RockerM4NHUN/STM32TimerArray"
+    "url": "https://github.com/RockerM4NHUN/STM32TimerArray.git"
   },
   "authors":
   {
@@ -16,6 +16,6 @@
     "maintainer": true
   },
   "version": "0.2.0",
-  "frameworks": "STM32Cube",
+  "frameworks": "stm32cube",
   "platforms": "stm32, ststm32"
 }

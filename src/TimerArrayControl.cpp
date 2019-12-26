@@ -21,9 +21,6 @@ TimerArrayControl::TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32
     fclk(fclk),
     clkdiv(clkdiv),
     bits(bits),
-    tickCallback([=](TIM_HandleTypeDef* _htim){
-        if (this->htim == _htim) tick();
-    }),
     htim(htim),
     timerString(Timer(nullptr)),
     request(REQUEST_NONE),
@@ -61,6 +58,10 @@ void TimerArrayControl::begin(){
     uint32_t target = timerString.next == nullptr ? (max_count & (cnt-1)) : timerString.next->target;
     __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, target); // if no timers to fire yet, set max delay between unneeded interrupts
     HAL_TIM_OC_Start_IT(htim, TARGET_CC_CHANNEL);
+}
+
+void TimerArrayControl::f(TIM_HandleTypeDef* _htim){
+    if (this->htim == _htim) tick();
 }
 
 /**

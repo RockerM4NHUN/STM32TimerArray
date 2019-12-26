@@ -1,17 +1,14 @@
 #pragma once
 
-#include <functional>
-
 template<typename ChainID, typename ... Args>
 class CallbackChain{
 public:
-    using func = std::function< void(Args...)>;
-    CallbackChain(func f);
+    CallbackChain();
     static void fire(Args... args);
 protected:
     static CallbackChain<ChainID, Args...>* last;
     CallbackChain<ChainID, Args...>* next;
-    func f;
+    virtual void f(Args...) = 0;
 };
 
 // ----- Implementation -----
@@ -20,7 +17,7 @@ template<typename ChainID, typename ... Args>
 CallbackChain<ChainID, Args...>* CallbackChain<ChainID, Args...>::last = nullptr;
 
 template<typename ChainID, typename ... Args>
-CallbackChain<ChainID, Args...>::CallbackChain(func f) : next(last), f(f){
+CallbackChain<ChainID, Args...>::CallbackChain() : next(last){
     last = this;
 }
 

@@ -54,7 +54,7 @@ protected:
 // fclk: timer's input clock speed, will be divided by clkdiv
 // clkdiv: how much clock division is required
 // bits: the number of bits in the counter register (16 or 32), prescaler is always considered 16 bit
-class TimerArrayControl{
+class TimerArrayControl : TAC_CallbackChain{
 public:
     TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/100'000, const uint32_t bits=16);
 
@@ -94,7 +94,8 @@ protected:
     void registerDetachedTimer();
     void registerDelayChange(uint32_t cnt);
 
-    TAC_CallbackChain tickCallback;
+    void f(TIM_HandleTypeDef*);
+
     TIM_HandleTypeDef *const htim;
     Timer timerString;
 

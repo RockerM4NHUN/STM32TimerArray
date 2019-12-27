@@ -80,6 +80,7 @@ public:
     TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/100'000, const uint32_t bits=16);
 
     void begin(); // start interrupt generation for the listeners
+    void stop(); // halt the hardware timer, stop interrupt generation
     void attachTimer(Timer* timer); // add a timer to the array, when it fires, the callback function is called
     void detachTimer(Timer* timer); // remove a timer from the array, stopping the callback event
     void changeTimerDelay(Timer* timer, uint32_t delay); // change the delay of the timer without changing the start time

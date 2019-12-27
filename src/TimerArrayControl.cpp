@@ -60,6 +60,11 @@ void TimerArrayControl::begin(){
     HAL_TIM_OC_Start_IT(htim, TARGET_CC_CHANNEL);
 }
 
+void TimerArrayControl::stop(){
+    // stop timer if it was running
+    HAL_TIM_OC_Stop_IT(htim, TARGET_CC_CHANNEL);
+}
+
 void TimerArrayControl::f(TIM_HandleTypeDef* _htim){
     if (this->htim == _htim) tick();
 }

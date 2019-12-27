@@ -17,7 +17,7 @@ using TAC_CallbackChain = CallbackChain<TAC_CallbackChainID, TIM_HandleTypeDef*>
 //
 // delay: ticks of timer array controller until firing
 // isPeriodic: does the timer restart immedietely when fires
-// f: function called when timer is firing
+// f: static function called when timer is firing
 class Timer{
 public:
     using callback_function = void(*)();
@@ -35,13 +35,34 @@ public:
 
 protected:
     uint32_t target; // counter value that the timer fires at next
-    const callback_function f;
+    void *const f; // WARNING: unsafe if you force the call of a certain fire method instead of letting the inheritance decide
     bool running;
     Timer* next;
+
+    virtual void fire();
 
     friend class TimerArrayControl;
 };
 
+// Represents a Timer with context.
+//
+// delay: ticks of timer array controller until firing
+// isPeriodic: does the timer restart immedietely when fires
+// ctx: context pointer to an object, will be passed to the callback function
+// ctxf: static function called when timer is firing, takes a Context* pointer argument
+template<typename Context>
+class ContextTimer : public Timer{
+public:
+    using dynamic_callback_function = void(*)(Context*);
+    ContextTimer(Context* ctx, const dynamic_callback_function ctxf) : ctx(ctx), Timer(ctxf) {}
+    ContextTimer(uint32_t delay, bool isPeriodic, Context* ctx, const dynamic_callback_function ctxf) : Timer(delay, isPeriodic, (callback_function)ctxf), ctx(ctx) {}
+protected:
+    Context* ctx;
+
+    virtual void fire(){
+        ((dynamic_callback_function)f)(ctx);
+    }
+};
 
 
 // Implements timer controller for hardware handling,

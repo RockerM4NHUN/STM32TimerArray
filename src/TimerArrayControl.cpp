@@ -124,7 +124,7 @@ void TimerArrayControl::tick(){
         __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, target);
 
         // fire callback
-        timer->f();
+        timer->fire();
     }
 
     isTickOngoing = false;
@@ -312,13 +312,17 @@ void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
 // -----                      -----
 
 Timer::Timer(const callback_function f)
-    : delay(10), isPeriodic(false), f(f), running(false), next(nullptr)
+    : delay(10), isPeriodic(false), f((void*)f), running(false), next(nullptr)
 {}
 
 Timer::Timer(uint32_t delay, bool isPeriodic, const callback_function f)
-    : delay(delay), isPeriodic(isPeriodic), f(f), running(false), next(nullptr)
+    : delay(delay), isPeriodic(isPeriodic), f((void*)f), running(false), next(nullptr)
 {}
 
 bool Timer::isRunning(){
     return running;
+}
+
+void Timer::fire(){
+    ((callback_function)f)();
 }

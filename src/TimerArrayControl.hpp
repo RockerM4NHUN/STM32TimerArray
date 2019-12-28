@@ -1,8 +1,10 @@
 #pragma once
 
-extern "C"{
-    #include "tim.h"
-}
+// enable timer module, the library needs the definitions
+#define HAL_TIM_MODULE_ENABLED
+
+// include HAL framework regardless of CPU type, this will include the timer module
+#include "main.h"
 
 #include "CallbackChain.hpp"
 

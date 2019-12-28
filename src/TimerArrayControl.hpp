@@ -84,6 +84,7 @@ public:
     void attachTimer(Timer* timer); // add a timer to the array, when it fires, the callback function is called
     void detachTimer(Timer* timer); // remove a timer from the array, stopping the callback event
     void changeTimerDelay(Timer* timer, uint32_t delay); // change the delay of the timer without changing the start time
+    void attachTimerInSync(Timer* timer, Timer* reference); // add timer to the array, like it was attached the same time as the reference timer
 
     const uint32_t fclk;
     const uint32_t clkdiv;
@@ -115,6 +116,7 @@ protected:
     void registerAttachedTimer(uint32_t cnt);
     void registerDetachedTimer();
     void registerDelayChange(uint32_t cnt);
+    void registerAttachedTimerInSync(uint32_t cnt);
 
     void f(TIM_HandleTypeDef*);
 
@@ -126,8 +128,10 @@ protected:
     static const uint8_t REQUEST_ATTACH = 1;
     static const uint8_t REQUEST_DETACH = 2;
     static const uint8_t REQUEST_DELAY_CHANGE = 3;
+    static const uint8_t REQUEST_ATTACH_SYNC = 4;
     volatile uint8_t request;
     Timer* requestTimer;
+    Timer* requestReferenceTimer;
     uint32_t requestDelay;
     volatile bool isTickOngoing;
 };

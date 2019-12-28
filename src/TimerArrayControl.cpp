@@ -130,6 +130,9 @@ void TimerArrayControl::tick(){
 
         // fire callback
         timer->fire();
+
+        // refetch the counter, could have changed significantly since the tick's start
+        cnt = __HAL_TIM_GET_COUNTER(htim);
     }
 
     isTickOngoing = false;
@@ -239,6 +242,37 @@ void TimerArrayControl::registerDelayChange(uint32_t cnt){
     }
 }
 
+void TimerArrayControl::registerAttachedTimerInSync(uint32_t cnt){
+
+    // won't reattach timer (if attached to this controller, it would be possible)
+    if (requestTimer->running) return;
+
+    requestTimer->target = max_count & (requestReferenceTimer->target - requestReferenceTimer->delay);
+    
+    // add the requested delay until the target is in the future
+    // arithmetic magic is necessary for correct handling of both 16 and 32 bit counters
+    do {
+        requestTimer->target += requestTimer->delay;
+        requestTimer->target &= max_count;
+    } while ((uint32_t)(max_count & (cnt - requestTimer->target)) < (max_count >> 1));
+
+    // find fitting place for timer in string
+    Timer* it = &timerString;
+    while(it->next && it->next->target < requestTimer->target){
+        // while there are more timers and the next timer's target is sooner than the new one's
+        // advance it on the timer string
+        it = it->next;
+    }
+
+    // insert the new timer between it and next of it
+    requestTimer->running = true;
+    requestTimer->next = it->next;
+    it->next = requestTimer;
+
+    // if the first timer changed, adjust interrupt target
+    if (timerString.next == requestTimer) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, requestTimer->target);
+}
+
 
 //
 // Public members
@@ -306,6 +340,30 @@ void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
         // timer is not running, main thread delay change is safe
         uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
         registerDelayChange(cnt);
+        request = REQUEST_NONE;
+    }
+}
+
+void TimerArrayControl::attachTimerInSync(Timer* timer, Timer* reference){
+    
+    // won't reattach timer (if attached to this controller, it would be possible)
+    if (timer->running) return;
+
+    requestTimer = timer; // register timer to attach
+    requestReferenceTimer = reference;
+    request = REQUEST_ATTACH_SYNC;
+
+    if (__HAL_IS_TIMER_ENABLED(htim) && !isTickOngoing){
+        // timer is running, use interrupted attach
+        
+        // generate interrupt to register attached timer
+        __HAL_GENERATE_INTERRUPT(htim, TARGET_CCIG_FLAG);
+
+        // don't wait for attach to happen, the interrupt will handle it very quickly
+    } else {
+        // timer is not running, main thread attach is safe, or we are in tick handler, interrupt attach is safe
+        uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
+        registerAttachedTimerInSync(cnt);
         request = REQUEST_NONE;
     }
 }

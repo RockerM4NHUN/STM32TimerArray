@@ -114,10 +114,10 @@ public:
 
 protected:
     void tick();
-    void registerAttachedTimer(uint32_t cnt);
-    void registerDetachedTimer();
-    void registerDelayChange(uint32_t cnt);
-    void registerAttachedTimerInSync(uint32_t cnt);
+    void registerAttachedTimer(uint32_t cnt, Timer* timer);
+    void registerDetachedTimer(Timer* timer);
+    void registerDelayChange(uint32_t cnt, Timer* timer, uint32_t delay);
+    void registerAttachedTimerInSync(uint32_t cnt, Timer* timer, Timer* reference);
 
     void f(TIM_HandleTypeDef*);
 

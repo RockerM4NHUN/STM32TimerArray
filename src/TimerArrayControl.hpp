@@ -70,14 +70,14 @@ protected:
 // Requires a timer with capture compare capabilities (implementing a timer array
 // with only a resetting counter requires significantly more computations).
 // Sets 1, 2 or 4 additional clock division if necessary.
-// By default has 100 kHz tick speed, a 1 ms delay needs a tick value of 100.
+// By default has 1 kHz tick speed, a 1 ms delay needs a tick value of 100.
 // 
 // fclk: timer's input clock speed, will be divided by clkdiv
 // clkdiv: how much clock division is required
 // bits: the number of bits in the counter register (16 or 32), prescaler is always considered 16 bit
 class TimerArrayControl : TAC_CallbackChain{
 public:
-    TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/100'000, const uint32_t bits=16);
+    TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/1000, const uint32_t bits=16);
 
     void begin(); // start interrupt generation for the listeners
     void stop(); // halt the hardware timer, stop interrupt generation

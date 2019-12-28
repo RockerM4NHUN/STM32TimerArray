@@ -16,6 +16,7 @@ You will need to install VSCode, STM32CubeMX and the PlatformIO extension for VS
 - Optionally set the baud rate of the default UART/USART serial port to 115200 for decent speed.
 - Navigate to the *Project Manager* tab.
 - Under *Project* select the *Other Toolchains (GPDSC)* toolchain.
+- Under *Code Generator* tick *Generate peripheral initialization as a pair of '.c/.h' files per peripheral*. (Makes possible to include the defined peripherals.)
 - Save the CubeMX project file in the PIO project's root directory. (You want to overwrite it.)
 - Click *Generate Code* to create the source files.
 

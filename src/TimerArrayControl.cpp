@@ -60,6 +60,11 @@ void TimerArrayControl::begin(){
     HAL_TIM_OC_Start_IT(htim, TARGET_CC_CHANNEL);
 }
 
+void TimerArrayControl::stop(){
+    // stop timer if it was running
+    HAL_TIM_OC_Stop_IT(htim, TARGET_CC_CHANNEL);
+}
+
 void TimerArrayControl::f(TIM_HandleTypeDef* _htim){
     if (this->htim == _htim) tick();
 }
@@ -76,9 +81,10 @@ void TimerArrayControl::tick(){
 
     // handle request
     switch(request){
-        case REQUEST_ATTACH: registerAttachedTimer(cnt); break;
-        case REQUEST_DETACH: registerDetachedTimer(); break;
-        case REQUEST_DELAY_CHANGE: registerDelayChange(cnt); break;
+        case REQUEST_ATTACH: registerAttachedTimer(cnt, requestTimer); break;
+        case REQUEST_DETACH: registerDetachedTimer(requestTimer); break;
+        case REQUEST_DELAY_CHANGE: registerDelayChange(cnt, requestTimer, requestDelay); break;
+        case REQUEST_ATTACH_SYNC: registerAttachedTimerInSync(cnt, requestTimer, requestReferenceTimer); break;
         default: break;
     }
     request = REQUEST_NONE;
@@ -124,76 +130,79 @@ void TimerArrayControl::tick(){
         __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, target);
 
         // fire callback
-        timer->f();
+        timer->fire();
+
+        // refetch the counter, could have changed significantly since the tick's start
+        cnt = __HAL_TIM_GET_COUNTER(htim);
     }
 
     isTickOngoing = false;
 }
 
-void TimerArrayControl::registerAttachedTimer(uint32_t cnt){
+void TimerArrayControl::registerAttachedTimer(uint32_t cnt, Timer* timer){
 
     // if timer is already attached to a controller, do nothing
-    if (requestTimer->running) return;
+    if (timer->running) return;
 
     // get current time in ticks and add the requested delay to find the target time
-    requestTimer->target = max_count & (requestTimer->delay + cnt);
+    timer->target = max_count & (timer->delay + cnt);
 
     // find fitting place for timer in string
     Timer* it = &timerString;
-    while(it->next && it->next->target < requestTimer->target){
+    while(it->next && it->next->target < timer->target){
         // while there are more timers and the next timer's target is sooner than the new one's
         // advance it on the timer string
         it = it->next;
     }
 
     // insert the new timer between it and next of it
-    requestTimer->running = true;
-    requestTimer->next = it->next;
-    it->next = requestTimer;
+    timer->running = true;
+    timer->next = it->next;
+    it->next = timer;
 
     // if the first timer changed, adjust interrupt target
-    if (timerString.next == requestTimer) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, requestTimer->target);
+    if (timerString.next == timer) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, timer->target);
 }
 
-void TimerArrayControl::registerDetachedTimer(){
-    if (!requestTimer->running) return;
+void TimerArrayControl::registerDetachedTimer(Timer* timer){
+    if (!timer->running) return;
     Timer* it = &timerString;
 
-    while(it->next && it->next != requestTimer) it = it->next;
+    while(it->next && it->next != timer) it = it->next;
 
-    if (it->next == requestTimer){
-        it->next = requestTimer->next;
-        requestTimer->next = nullptr;
-        requestTimer->running = false;
+    if (it->next == timer){
+        it->next = timer->next;
+        timer->next = nullptr;
+        timer->running = false;
     }
 }
 
-void TimerArrayControl::registerDelayChange(uint32_t cnt){
+void TimerArrayControl::registerDelayChange(uint32_t cnt, Timer* timer, uint32_t delay){
 
-    if (!requestTimer->running) {
-        requestTimer->delay = requestDelay;
+    if (!timer->running) {
+        timer->delay = delay;
         return;
     }
 
     // if there are not more ticks until the current target is reached then
     // the ticks we try to bring the target early, the new target will be in tha past
-    if ((uint32_t)(max_count & (requestTimer->target - cnt)) <= requestTimer->delay - requestDelay){
+    if ((uint32_t)(max_count & (timer->target - cnt)) <= timer->delay - delay){
         // the requested delay is already passed, skip the callbacks between the start and now
         
         // add the requested delay until the target is in the future
         // arithmetic magic is necessary for correct handling of both 16 and 32 bit counters
-        requestTimer->target -= requestTimer->delay;
+        timer->target -= timer->delay;
         do {
-            requestTimer->target += requestDelay;
-            requestTimer->target &= max_count;
-        } while ((uint32_t)(max_count & (cnt - requestTimer->target)) < (max_count >> 1));
-        requestTimer->delay = requestDelay;
+            timer->target += delay;
+            timer->target &= max_count;
+        } while ((uint32_t)(max_count & (cnt - timer->target)) < (max_count >> 1));
+        timer->delay = delay;
 
     } else {
         // the new target will be in the future, set it as usual
-        requestTimer->target += requestDelay - requestTimer->delay;
-        requestTimer->target &= max_count;
-        requestTimer->delay = requestDelay;
+        timer->target += delay - timer->delay;
+        timer->target &= max_count;
+        timer->delay = delay;
     }
 
     
@@ -202,17 +211,17 @@ void TimerArrayControl::registerDelayChange(uint32_t cnt){
     Timer* rem = ins;
 
     // search attach position
-    while(ins->next && ins->next->target < requestTimer->target){
+    while(ins->next && ins->next->target < timer->target){
         // while there are more timers and the next timer's target is sooner than the modified one's
         // advance |ins| on the timer string
         ins = ins->next;
 
         // if the next timer is not our's to remove, advance |rem| on the string
-        if (rem->next != requestTimer) rem = ins;
+        if (rem->next != timer) rem = ins;
     }
 
     // search where the timer was, to detach it from that position
-    while(rem->next && rem->next != requestTimer) rem = rem->next;
+    while(rem->next && rem->next != timer) rem = rem->next;
     
     // If the interrupt was set to a timer that has changed, set new target.
     // If ins is first timer, the timer was put to first place.
@@ -226,12 +235,43 @@ void TimerArrayControl::registerDelayChange(uint32_t cnt){
     // only move timer if the timer's place changed
     if (ins != rem){
         // remove our timer from the string
-        rem->next = requestTimer->next;
+        rem->next = timer->next;
 
         // insert our timer between |ins| and next of |ins|
-        requestTimer->next = ins->next;
-        ins->next = requestTimer;
+        timer->next = ins->next;
+        ins->next = timer;
     }
+}
+
+void TimerArrayControl::registerAttachedTimerInSync(uint32_t cnt, Timer* timer, Timer* reference){
+
+    // won't reattach timer (if attached to this controller, it would be possible)
+    if (timer->running) return;
+
+    timer->target = max_count & (reference->target - reference->delay);
+    
+    // add the requested delay until the target is in the future
+    // arithmetic magic is necessary for correct handling of both 16 and 32 bit counters
+    do {
+        timer->target += timer->delay;
+        timer->target &= max_count;
+    } while ((uint32_t)(max_count & (cnt - timer->target)) < (max_count >> 1));
+
+    // find fitting place for timer in string
+    Timer* it = &timerString;
+    while(it->next && it->next->target < timer->target){
+        // while there are more timers and the next timer's target is sooner than the new one's
+        // advance it on the timer string
+        it = it->next;
+    }
+
+    // insert the new timer between it and next of it
+    timer->running = true;
+    timer->next = it->next;
+    it->next = timer;
+
+    // if the first timer changed, adjust interrupt target
+    if (timerString.next == timer) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, timer->target);
 }
 
 
@@ -243,10 +283,11 @@ void TimerArrayControl::registerDelayChange(uint32_t cnt){
 void TimerArrayControl::attachTimer(Timer* timer){
     
     requestTimer = timer; // register timer to attach
-    request = REQUEST_ATTACH;
 
     if (__HAL_IS_TIMER_ENABLED(htim) && !isTickOngoing){
         // timer is running, use interrupted attach
+
+        request = REQUEST_ATTACH;
         
         // generate interrupt to register attached timer
         __HAL_GENERATE_INTERRUPT(htim, TARGET_CCIG_FLAG);
@@ -255,8 +296,7 @@ void TimerArrayControl::attachTimer(Timer* timer){
     } else {
         // timer is not running, main thread attach is safe, or we are in tick handler, interrupt attach is safe
         uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
-        registerAttachedTimer(cnt);
-        request = REQUEST_NONE;
+        registerAttachedTimer(cnt, timer);
     }
 
 }
@@ -264,10 +304,11 @@ void TimerArrayControl::attachTimer(Timer* timer){
 void TimerArrayControl::detachTimer(Timer* timer){
     
     requestTimer = timer; // register timer to detach
-    request = REQUEST_DETACH;
 
     if (__HAL_IS_TIMER_ENABLED(htim) && !isTickOngoing){
         // timer is running, use interrupted detach
+
+        request = REQUEST_DETACH;
         
         // generate interrupt to register detached timer
         __HAL_GENERATE_INTERRUPT(htim, TARGET_CCIG_FLAG);
@@ -275,8 +316,7 @@ void TimerArrayControl::detachTimer(Timer* timer){
         // don't wait for detach to happen, the interrupt will handle it very quickly
     } else {
         // timer is not running, main thread detach is safe
-        registerDetachedTimer();
-        request = REQUEST_NONE;
+        registerDetachedTimer(timer);
     }
 
 }
@@ -288,11 +328,12 @@ void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
     
     requestTimer = timer; // register timer to change delay
     requestDelay = delay;
-    request = REQUEST_DELAY_CHANGE;
 
     if (__HAL_IS_TIMER_ENABLED(htim) && !isTickOngoing){
         // timer is running, use interrupted delay change
         
+        request = REQUEST_DELAY_CHANGE;
+
         // generate interrupt to register delay change timer
         __HAL_GENERATE_INTERRUPT(htim, TARGET_CCIG_FLAG);
 
@@ -300,11 +341,39 @@ void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
     } else {
         // timer is not running, main thread delay change is safe
         uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
-        registerDelayChange(cnt);
-        request = REQUEST_NONE;
+        registerDelayChange(cnt, timer, delay);
     }
 }
 
+void TimerArrayControl::attachTimerInSync(Timer* timer, Timer* reference){
+    
+    // won't reattach timer (if attached to this controller, it would be possible)
+    if (timer->running) return;
+
+    requestTimer = timer; // register timer to attach
+    requestReferenceTimer = reference;
+
+    if (__HAL_IS_TIMER_ENABLED(htim) && !isTickOngoing){
+        // timer is running, use interrupted attach
+
+        request = REQUEST_ATTACH_SYNC;
+        
+        // generate interrupt to register attached timer
+        __HAL_GENERATE_INTERRUPT(htim, TARGET_CCIG_FLAG);
+
+        // don't wait for attach to happen, the interrupt will handle it very quickly
+    } else {
+        // timer is not running, main thread attach is safe, or we are in tick handler, interrupt attach is safe
+        uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
+        registerAttachedTimerInSync(cnt, timer, reference);
+    }
+}
+
+uint32_t TimerArrayControl::remainingTicks(Timer* timer) const {
+    if (!timer->running) return 0;
+    const uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
+    return max_count & (timer->target - cnt);
+}
 
 
 // -----                      -----
@@ -312,13 +381,17 @@ void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
 // -----                      -----
 
 Timer::Timer(const callback_function f)
-    : delay(10), isPeriodic(false), f(f), running(false), next(nullptr)
+    : delay(10), isPeriodic(false), f((void*)f), running(false), next(nullptr)
 {}
 
 Timer::Timer(uint32_t delay, bool isPeriodic, const callback_function f)
-    : delay(delay), isPeriodic(isPeriodic), f(f), running(false), next(nullptr)
+    : delay(delay), isPeriodic(isPeriodic), f((void*)f), running(false), next(nullptr)
 {}
 
 bool Timer::isRunning(){
     return running;
+}
+
+void Timer::fire(){
+    ((callback_function)f)();
 }

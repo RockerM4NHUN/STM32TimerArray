@@ -84,6 +84,7 @@ void TimerArrayControl::tick(){
         case REQUEST_ATTACH: registerAttachedTimer(cnt, requestTimer); break;
         case REQUEST_DETACH: registerDetachedTimer(requestTimer); break;
         case REQUEST_DELAY_CHANGE: registerDelayChange(cnt, requestTimer, requestDelay); break;
+        case REQUEST_ATTACH_SYNC: registerAttachedTimerInSync(cnt, requestTimer, requestReferenceTimer); break;
         default: break;
     }
     request = REQUEST_NONE;

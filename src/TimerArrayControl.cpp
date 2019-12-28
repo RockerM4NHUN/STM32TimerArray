@@ -368,6 +368,11 @@ void TimerArrayControl::attachTimerInSync(Timer* timer, Timer* reference){
     }
 }
 
+uint32_t TimerArrayControl::remainingTicks(Timer* timer) const {
+    if (!timer->running) return 0;
+    const uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
+    return max_count & (timer->target - cnt);
+}
 
 
 // -----                      -----

@@ -85,6 +85,7 @@ public:
     void detachTimer(Timer* timer); // remove a timer from the array, stopping the callback event
     void changeTimerDelay(Timer* timer, uint32_t delay); // change the delay of the timer without changing the start time
     void attachTimerInSync(Timer* timer, Timer* reference); // add timer to the array, like it was attached the same time as the reference timer
+    uint32_t remainingTicks(Timer* timer) const;
 
     const uint32_t fclk;
     const uint32_t clkdiv;

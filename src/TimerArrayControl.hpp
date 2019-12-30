@@ -56,7 +56,7 @@ template<typename Context>
 class ContextTimer : public Timer{
 public:
     using dynamic_callback_function = void(*)(Context*);
-    ContextTimer(Context* ctx, const dynamic_callback_function ctxf) : ctx(ctx), Timer(ctxf) {}
+    ContextTimer(Context* ctx, const dynamic_callback_function ctxf) : Timer((callback_function)ctxf), ctx(ctx) {}
     ContextTimer(uint32_t delay, bool isPeriodic, Context* ctx, const dynamic_callback_function ctxf) : Timer(delay, isPeriodic, (callback_function)ctxf), ctx(ctx) {}
 protected:
     Context* ctx;

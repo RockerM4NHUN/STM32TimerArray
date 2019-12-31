@@ -18,13 +18,13 @@ using TAC_CallbackChain = CallbackChain<TAC_CallbackChainID, TIM_HandleTypeDef*>
 // Attach it to a controller to receive callbacks.
 //
 // delay: ticks of timer array controller until firing
-// isPeriodic: does the timer restart immedietely when fires
+// periodic: does the timer restart immedietely when fires
 // f: static function called when timer is firing
 class Timer{
 public:
     using callback_function = void(*)();
     Timer(const callback_function f);
-    Timer(uint32_t delay, bool isPeriodic, const callback_function f);
+    Timer(uint32_t delay, bool periodic, const callback_function f);
     
     bool isRunning();
 
@@ -33,7 +33,7 @@ public:
     // To change the timer's delay without restart, use the changeTimerDelay method
     // in the TimerArrayControl.
     uint32_t delay; // required delay of timer (in ticks)
-    bool isPeriodic; // should the timer be immedietely restarted after firing
+    bool periodic; // should the timer be immedietely restarted after firing
 
 protected:
     uint32_t target; // counter value that the timer fires at next

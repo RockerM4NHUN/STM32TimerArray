@@ -94,7 +94,7 @@ void TimerArrayControl::tick(){
         Timer* timer = timerString.next;
 
         // set up the next interrupt generation
-        if (timer->isPeriodic){
+        if (timer->periodic){
 
             // set new target for timer
             timer->target += timer->delay;
@@ -381,11 +381,11 @@ uint32_t TimerArrayControl::remainingTicks(Timer* timer) const {
 // -----                      -----
 
 Timer::Timer(const callback_function f)
-    : delay(10), isPeriodic(false), f((void*)f), running(false), next(nullptr)
+    : delay(10), periodic(false), f((void*)f), running(false), next(nullptr)
 {}
 
 Timer::Timer(uint32_t delay, bool isPeriodic, const callback_function f)
-    : delay(delay), isPeriodic(isPeriodic), f((void*)f), running(false), next(nullptr)
+    : delay(delay), periodic(isPeriodic), f((void*)f), running(false), next(nullptr)
 {}
 
 bool Timer::isRunning(){

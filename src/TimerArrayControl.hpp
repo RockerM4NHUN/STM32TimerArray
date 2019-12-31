@@ -89,6 +89,7 @@ public:
     void attachTimerInSync(Timer* timer, Timer* reference); // add timer to the array, like it was attached the same time as the reference timer
     void manualFire(Timer* timer);
     uint32_t remainingTicks(Timer* timer) const;
+    uint32_t elapsedTicks(Timer* timer) const;
 
     const uint32_t fclk;
     const uint32_t clkdiv;

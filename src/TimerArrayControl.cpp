@@ -411,6 +411,11 @@ uint32_t TimerArrayControl::remainingTicks(Timer* timer) const {
     return max_count & (timer->target - cnt);
 }
 
+uint32_t TimerArrayControl::elapsedTicks(Timer* timer) const {
+    if (!timer->running) return 0;
+    return timer->delay - remainingTicks(timer);
+}
+
 
 // -----                      -----
 // ----- Timer implementation -----

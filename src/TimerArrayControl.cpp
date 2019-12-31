@@ -85,6 +85,7 @@ void TimerArrayControl::tick(){
         case REQUEST_DETACH: registerDetachedTimer(requestTimer); break;
         case REQUEST_DELAY_CHANGE: registerDelayChange(cnt, requestTimer, requestDelay); break;
         case REQUEST_ATTACH_SYNC: registerAttachedTimerInSync(cnt, requestTimer, requestReferenceTimer); break;
+        case REQUEST_MANUAL_FIRE: registerManualFire(cnt, requestTimer); break;
         default: break;
     }
     request = REQUEST_NONE;
@@ -274,6 +275,21 @@ void TimerArrayControl::registerAttachedTimerInSync(uint32_t cnt, Timer* timer, 
     if (timerString.next == timer) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, timer->target);
 }
 
+void TimerArrayControl::registerManualFire(uint32_t cnt, Timer* timer){
+
+    // fire timer manually
+    timer->fire();
+    
+    // if timer was running detach it, if it was periodic it will be immedietely reattached
+    if (timer->running) registerDetachedTimer(timer);
+
+    // if timer is periodic, restart it at this moment
+    if (timer->periodic){
+        timer->running = false;
+        registerAttachedTimer(cnt, timer);
+    }
+}
+
 
 //
 // Public members
@@ -366,6 +382,26 @@ void TimerArrayControl::attachTimerInSync(Timer* timer, Timer* reference){
         // timer is not running, main thread attach is safe, or we are in tick handler, interrupt attach is safe
         uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
         registerAttachedTimerInSync(cnt, timer, reference);
+    }
+}
+
+void TimerArrayControl::manualFire(Timer* timer){
+    
+    requestTimer = timer; // register timer to manually fire
+
+    if (__HAL_IS_TIMER_ENABLED(htim) && !isTickOngoing){
+        // timer is running, use interrupted manual fire
+
+        request = REQUEST_MANUAL_FIRE;
+        
+        // generate interrupt to register manual fire 
+        __HAL_GENERATE_INTERRUPT(htim, TARGET_CCIG_FLAG);
+
+        // don't wait for it to happen, the interrupt will handle it very quickly
+    } else {
+        // timer is not running, main thread attach is safe, or we are in tick handler, interrupt attach is safe
+        uint32_t cnt = __HAL_TIM_GET_COUNTER(htim);
+        registerManualFire(cnt, timer);
     }
 }
 

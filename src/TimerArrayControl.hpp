@@ -87,6 +87,7 @@ public:
     void detachTimer(Timer* timer); // remove a timer from the array, stopping the callback event
     void changeTimerDelay(Timer* timer, uint32_t delay); // change the delay of the timer without changing the start time
     void attachTimerInSync(Timer* timer, Timer* reference); // add timer to the array, like it was attached the same time as the reference timer
+    void manualFire(Timer* timer);
     uint32_t remainingTicks(Timer* timer) const;
 
     const uint32_t fclk;
@@ -120,6 +121,7 @@ protected:
     void registerDetachedTimer(Timer* timer);
     void registerDelayChange(uint32_t cnt, Timer* timer, uint32_t delay);
     void registerAttachedTimerInSync(uint32_t cnt, Timer* timer, Timer* reference);
+    void registerManualFire(uint32_t cnt, Timer* timer);
 
     void f(TIM_HandleTypeDef*);
 
@@ -132,6 +134,7 @@ protected:
     static const uint8_t REQUEST_DETACH = 2;
     static const uint8_t REQUEST_DELAY_CHANGE = 3;
     static const uint8_t REQUEST_ATTACH_SYNC = 4;
+    static const uint8_t REQUEST_MANUAL_FIRE = 5;
     volatile uint8_t request;
     Timer* requestTimer;
     Timer* requestReferenceTimer;

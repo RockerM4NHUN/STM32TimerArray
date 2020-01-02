@@ -117,7 +117,22 @@ public:
     const uint32_t fcnt = fclk/prescaler/prediv; // counting frequency
 
 protected:
+    struct TimerFeed{
+        Timer root;
+        TIM_HandleTypeDef *const htim;
+
+        TimerFeed(TIM_HandleTypeDef *const htim);
+        Timer* findTimerInsertionLink(Timer* it, Timer* timer);
+        Timer* findTimerInsertionLink(Timer* timer);
+        void insertTimer(Timer* it, Timer* timer);
+        void insertTimer(Timer* timer);
+        void removeTimer(Timer* timer);
+        void reinsertTimer(Timer* timer);
+    };
+
     void tick();
+    static Timer* findTimerInsertionLink(Timer* it, Timer* timer);
+    void insertTimer(Timer* it, Timer* timer);
     void registerAttachedTimer(uint32_t cnt, Timer* timer);
     void registerDetachedTimer(Timer* timer);
     void registerDelayChange(uint32_t cnt, Timer* timer, uint32_t delay);
@@ -126,8 +141,7 @@ protected:
 
     void f(TIM_HandleTypeDef*);
 
-    TIM_HandleTypeDef *const htim;
-    Timer timerString;
+    TimerFeed timerFeed;
 
     // only one timer and operation flag needed, the request variable has to be atomic rw
     static const uint8_t REQUEST_NONE = 0;

@@ -12,10 +12,13 @@ The library works with the `TimerArrayControl` class handling the hardware and `
 
 ## Versions
 - *Planned Version 1.0.0*\
-  Examples for all functionality. Proper documentation of API. Unit tests.
+  Examples for all functionality. Proper documentation of API.
+  
+- *Planned Version 0.5.0*\
+  New implementation to support every STM32 timer.
   
 - *Planned Version 0.4.0*\
-  Refactor of TimerArrayControl. New implementation to support every STM32 timer.
+  Refactor of TimerArrayControl. Unit tests. New manual fire and query functions.
   
 - **Version 0.3.0**\
   New ContextTimer for callbacks with context, avoiding the use of expensive lambdas. No unit tests yet.

@@ -6,7 +6,7 @@
 // routine can exist independently, without requiring rewriting
 // the function for the current setup at all times
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim){
-    TAC_CallbackChain::fire(htim);
+    TIM_OC_DelayElapsed_CallbackChain::fire(htim);
 }
 
 #define __HAL_IS_TIMER_ENABLED(htim) (htim->Instance->CR1 & TIM_CR1_CEN)

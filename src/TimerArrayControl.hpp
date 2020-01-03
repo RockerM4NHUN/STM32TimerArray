@@ -9,9 +9,9 @@
 #include "CallbackChain.hpp"
 
 
-// TimerArrayControl callback chain setup
-struct TAC_CallbackChainID{};
-using TAC_CallbackChain = CallbackChain<TAC_CallbackChainID, TIM_HandleTypeDef*>;
+// Callback chain setup for HAL_TIM_OC_DelayElapsedCallback function
+struct TIM_OC_DelayElapsed_CallbackChainID{};
+using TIM_OC_DelayElapsed_CallbackChain = CallbackChain<TIM_OC_DelayElapsed_CallbackChainID, TIM_HandleTypeDef*>;
 
 
 // Represents a timer, handled by a TimerArrayControl object.
@@ -78,7 +78,7 @@ protected:
 // bits: the number of bits in the counter register (16 or 32)
 // prescaler: minimum of 65536 and clkdiv, compare with clkdiv to find out if selected prescale is possible
 // fcnt: the actual counting frequency based on the settings and limitations
-class TimerArrayControl : TAC_CallbackChain{
+class TimerArrayControl : TIM_OC_DelayElapsed_CallbackChain{
 public:
     TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/10000, const uint32_t bits=16);
 

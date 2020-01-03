@@ -114,7 +114,7 @@ TimerArrayControl::TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32
     clkdiv(clkdiv),
     bits(bits),
     timerFeed(htim),
-    request(REQUEST_NONE),
+    request(NONE),
     requestTimer(nullptr),
     requestDelay(0),
     isTickOngoing(false)
@@ -172,14 +172,14 @@ void TimerArrayControl::tick(){
 
     // handle request
     switch(request){
-        case REQUEST_ATTACH: registerAttachedTimer(cnt, requestTimer); break;
-        case REQUEST_DETACH: registerDetachedTimer(requestTimer); break;
-        case REQUEST_DELAY_CHANGE: registerDelayChange(cnt, requestTimer, requestDelay); break;
-        case REQUEST_ATTACH_SYNC: registerAttachedTimerInSync(cnt, requestTimer, requestReferenceTimer); break;
-        case REQUEST_MANUAL_FIRE: registerManualFire(cnt, requestTimer); break;
+        case ATTACH: registerAttachedTimer(cnt, requestTimer); break;
+        case DETACH: registerDetachedTimer(requestTimer); break;
+        case DELAY_CHANGE: registerDelayChange(cnt, requestTimer, requestDelay); break;
+        case ATTACH_SYNC: registerAttachedTimerInSync(cnt, requestTimer, requestReferenceTimer); break;
+        case MANUAL_FIRE: registerManualFire(cnt, requestTimer); break;
         default: break;
     }
-    request = REQUEST_NONE;
+    request = NONE;
 
     // handle timeout
     while (timerFeed.root.next && ((uint32_t)(cnt - timerFeed.root.next->target)) < CALLBACK_JITTER){
@@ -328,7 +328,7 @@ void TimerArrayControl::attachTimer(Timer* timer){
     if (__HAL_IS_TIMER_ENABLED(timerFeed.htim) && !isTickOngoing){
         // timer is running, use interrupted attach
 
-        request = REQUEST_ATTACH;
+        request = ATTACH;
         
         // generate interrupt to register attached timer
         __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);
@@ -349,7 +349,7 @@ void TimerArrayControl::detachTimer(Timer* timer){
     if (__HAL_IS_TIMER_ENABLED(timerFeed.htim) && !isTickOngoing){
         // timer is running, use interrupted detach
 
-        request = REQUEST_DETACH;
+        request = DETACH;
         
         // generate interrupt to register detached timer
         __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);
@@ -373,7 +373,7 @@ void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
     if (__HAL_IS_TIMER_ENABLED(timerFeed.htim) && !isTickOngoing){
         // timer is running, use interrupted delay change
         
-        request = REQUEST_DELAY_CHANGE;
+        request = DELAY_CHANGE;
 
         // generate interrupt to register delay change timer
         __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);
@@ -397,7 +397,7 @@ void TimerArrayControl::attachTimerInSync(Timer* timer, Timer* reference){
     if (__HAL_IS_TIMER_ENABLED(timerFeed.htim) && !isTickOngoing){
         // timer is running, use interrupted attach
 
-        request = REQUEST_ATTACH_SYNC;
+        request = ATTACH_SYNC;
         
         // generate interrupt to register attached timer
         __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);
@@ -417,7 +417,7 @@ void TimerArrayControl::manualFire(Timer* timer){
     if (__HAL_IS_TIMER_ENABLED(timerFeed.htim) && !isTickOngoing){
         // timer is running, use interrupted manual fire
 
-        request = REQUEST_MANUAL_FIRE;
+        request = MANUAL_FIRE;
         
         // generate interrupt to register manual fire 
         __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);

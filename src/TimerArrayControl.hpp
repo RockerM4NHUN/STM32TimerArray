@@ -143,14 +143,17 @@ protected:
 
     TimerFeed timerFeed;
 
-    // only one timer and operation flag needed, the request variable has to be atomic rw
-    static const uint8_t REQUEST_NONE = 0;
-    static const uint8_t REQUEST_ATTACH = 1;
-    static const uint8_t REQUEST_DETACH = 2;
-    static const uint8_t REQUEST_DELAY_CHANGE = 3;
-    static const uint8_t REQUEST_ATTACH_SYNC = 4;
-    static const uint8_t REQUEST_MANUAL_FIRE = 5;
-    volatile uint8_t request;
+    // the request variable has to be atomic RW, bytes achieve that
+    enum Request : uint8_t {
+        NONE = 0,
+        ATTACH,
+        DETACH,
+        DELAY_CHANGE,
+        ATTACH_SYNC,
+        MANUAL_FIRE
+    };
+
+    volatile Request request;
     Timer* requestTimer;
     Timer* requestReferenceTimer;
     uint32_t requestDelay;

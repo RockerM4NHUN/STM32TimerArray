@@ -69,17 +69,18 @@ protected:
 
 // Implements timer controller for hardware handling,
 // it encapsulates any hardware related issue and presents a simple common API.
-// Requires a timer with capture compare capabilities (implementing a timer array
-// with only a resetting counter requires significantly more computations).
-// Sets 1, 2 or 4 additional clock division if necessary.
-// By default has 1 kHz tick speed, a 1 ms delay needs a tick value of 100.
+// Requires a timer with capture compare capabilities.
+// By default has 10 kHz tick speed, a 1 ms delay needs a tick value of 10, 0.5 sec is 5000 ticks.
 // 
 // fclk: timer's input clock speed, will be divided by clkdiv
-// clkdiv: how much clock division is required
-// bits: the number of bits in the counter register (16 or 32), prescaler is always considered 16 bit
+// clkdiv: how much clock division is required, maximum allowed value depends on the specific timer's prescale register's size
+//         currently limited for every timer to 65536 (16 bit prescale register), it could become a setting if needed
+// bits: the number of bits in the counter register (16 or 32)
+// prescaler: minimum of 65536 and clkdiv, compare with clkdiv to find out if selected prescale is possible
+// fcnt: the actual counting frequency based on the settings and limitations
 class TimerArrayControl : TAC_CallbackChain{
 public:
-    TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/1000, const uint32_t bits=16);
+    TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/10000, const uint32_t bits=16);
 
     void begin(); // start interrupt generation for the listeners
     void stop(); // halt the hardware timer, stop interrupt generation
@@ -101,20 +102,9 @@ public:
     static const auto max_prescale = (1 << prescaler_bits);
 
     const uint32_t max_count = (1 << bits) - 1;
-    const uint32_t prediv = // select the appropriate predivision, clkdiv will be altered accordingly
-        (clkdiv > max_prescale) ? (
-            ((clkdiv >> 1) > max_prescale) ? (
-                4
-            ) : (
-                2
-            )
-        ) : (
-            1
-        );
     
-    // divide clkdiv, to find out the actual prescaler value, then divide fclk with prescaler and prediv
-    const uint32_t prescaler = clkdiv/prediv > max_prescale ? max_prescale : clkdiv/prediv;
-    const uint32_t fcnt = fclk/prescaler/prediv; // counting frequency
+    const uint32_t prescaler = clkdiv > max_prescale ? max_prescale : clkdiv;
+    const uint32_t fcnt = fclk/prescaler; // actual counting frequency
 
 protected:
     struct TimerFeed{

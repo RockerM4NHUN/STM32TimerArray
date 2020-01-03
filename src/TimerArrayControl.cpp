@@ -128,17 +128,7 @@ void TimerArrayControl::begin(){
     timerFeed.htim->Init.CounterMode = TIM_COUNTERMODE_UP; // all STM32 counters support it
     timerFeed.htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE; // by disabling, write to ARR shadow regs happens immedietely
     timerFeed.htim->Init.Period = max_count; // set max period for maximum amount of possible delay
-    timerFeed.htim->Init.Prescaler = prescaler - 1; // prescaler divides clock by psc+1
-    timerFeed.htim->Init.ClockDivision =
-        (prediv == 1) ? (
-            TIM_CLOCKDIVISION_DIV1
-        ) : (
-            (prediv == 2) ? (
-                TIM_CLOCKDIVISION_DIV2
-            ) : (
-                TIM_CLOCKDIVISION_DIV4
-            )
-        );
+    timerFeed.htim->Init.Prescaler = prescaler - 1; // prescaler divides clock by Prescaler+1
 
     TIM_OC_InitTypeDef oc_init;
     oc_init.OCMode = TIM_OCMODE_TIMING;

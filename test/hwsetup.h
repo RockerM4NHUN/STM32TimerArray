@@ -2,7 +2,7 @@
 #ifndef HW_SETUP_H
 #define HW_SETUP_H
 
-#include "stm32f3xx_hal.h"
+#include "stm32_hal.h"
 
 #ifdef __cplusplus
 extern "C" {

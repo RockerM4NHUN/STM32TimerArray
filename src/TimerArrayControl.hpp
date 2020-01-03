@@ -4,7 +4,7 @@
 #define HAL_TIM_MODULE_ENABLED
 
 // include HAL framework regardless of CPU type, this will include the timer module
-#include "main.h"
+#include "stm32_hal.h"
 
 #include "CallbackChain.hpp"
 

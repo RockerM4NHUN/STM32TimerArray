@@ -89,8 +89,10 @@ public:
     void changeTimerDelay(Timer* timer, uint32_t delay); // change the delay of the timer without changing the start time
     void attachTimerInSync(Timer* timer, Timer* reference); // add timer to the array, like it was attached the same time as the reference timer
     void manualFire(Timer* timer);
+    
     uint32_t remainingTicks(Timer* timer) const;
     uint32_t elapsedTicks(Timer* timer) const;
+    float actualTickFrequency() const;
 
     const uint32_t fclk;
     const uint32_t clkdiv;
@@ -104,7 +106,6 @@ public:
     const uint32_t max_count = (1 << bits) - 1;
     
     const uint32_t prescaler = clkdiv > max_prescale ? max_prescale : clkdiv;
-    const uint32_t fcnt = fclk/prescaler; // actual counting frequency
 
 protected:
     struct TimerFeed{

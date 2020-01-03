@@ -431,6 +431,10 @@ uint32_t TimerArrayControl::elapsedTicks(Timer* timer) const {
     return timer->delay - remainingTicks(timer);
 }
 
+float TimerArrayControl::actualTickFrequency() const {
+    return ((float)fclk)/prescaler;
+}
+
 
 // -----                      -----
 // ----- Timer implementation -----

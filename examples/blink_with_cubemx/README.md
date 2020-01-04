@@ -12,7 +12,7 @@ See the `project_setup_with_cubemx` example for getting started and setting up a
 - Click *Generate Code* to update settings in source.
 
 ### 2. Setup software
-- Copy the contents of *app.cpp* to *src/app.cpp* in your project.
+- Copy the contents of *blink_with_cubemx.cpp* to *src/app.cpp* in your project.
 - Click PlatformIO Upload.
 - The user LED should flash once a second.
 

@@ -56,6 +56,6 @@ void app_start(){
 	// 1 ms (millisecond) per tick counting multiplied by 500 ticks is 500 ms or 0.5 sec.
     control.attachTimer(&t_toggle);
 	
-	// Lay back, the timer callback is set, interrupts will handle everything.
-	while(1);
+    // Lay back, the timer callback is set, interrupts will handle everything.
+    while(1);
 }

@@ -7,13 +7,17 @@
  * Test basic functionalities of TimerArrayControl, without using any peripherals.
  */
 
-// -----            -----
-// ----- Test cases -----
-// -----            -----
+// -----                           -----
+// ----- Always passing dummy test -----
+// -----                           -----
 
 void test_evaluation_of_an_empty_test(){
     // empty test should pass
 }
+
+// -----                                           -----
+// ----- Test TimerArrayControl setup calculations -----
+// -----                                           -----
 
 void test_parameter_settings(){
     // <ignored>, fclk, clkdiv and bits are set
@@ -74,6 +78,13 @@ void test_fcnt_calculation(){
     { TimerArrayControl control(nullptr, 250'000'000, 65536, 16); TEST_ASSERT_FLOAT_WITHIN(250e1, 3814.69726, control.actualTickFrequency()); }
 }
 
+// -----                          -----
+// ----- Test TimerFeed functions -----
+// -----                          -----
+
+// TODO
+
+
 // -----                -----
 // ----- Test execution -----
 // -----                -----
@@ -92,11 +103,16 @@ int main() {
 
     UNITY_BEGIN();
     
+    // Always passing dummy test
     RUN_TEST(test_evaluation_of_an_empty_test);
+    
+    // Test TimerArrayControl setup calculations
     RUN_TEST(test_parameter_settings);
     RUN_TEST(test_prescale_settings);
     RUN_TEST(test_max_counter_value);
     RUN_TEST(test_fcnt_calculation);
+
+    // Test TimerFeed functions
 
     UNITY_END();
 

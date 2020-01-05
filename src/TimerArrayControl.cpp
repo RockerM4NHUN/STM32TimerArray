@@ -64,15 +64,15 @@ void TimerArrayControl::TimerFeed::removeTimer(Timer* timer){
     if (&root == it && root.next) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, root.next->target);
 }
 
-// remove and insert timer in one operation
-void TimerArrayControl::TimerFeed::reinsertTimer(Timer* timer){
+// remove and insert timer in one operation, according to it's target
+void TimerArrayControl::TimerFeed::updateTarget(Timer* timer, uint32_t target){
     
     // find fitting place for timer in string
     Timer* ins = &root;
     Timer* rem = ins;
 
     // search attach position
-    while(ins->next && ins->next->target < timer->target){
+    while(ins->next && ins->next->target < target){
         // while there are more timers and the next timer's target is sooner than the modified one's
         // advance |ins| on the timer string
         ins = ins->next;
@@ -84,8 +84,8 @@ void TimerArrayControl::TimerFeed::reinsertTimer(Timer* timer){
     // search where the timer was, to detach it from that position
     while(rem->next && rem->next != timer) rem = rem->next;
 
-    // only move timer if the timer's place changed
-    if (ins != rem){
+    // only move timer if the predecessor changed and it is not itself
+    if (ins != rem && ins != timer){
         // remove our timer from the string
         rem->next = timer->next;
 
@@ -93,6 +93,9 @@ void TimerArrayControl::TimerFeed::reinsertTimer(Timer* timer){
         timer->next = ins->next;
         ins->next = timer;
     }
+
+    // update the timer's target
+    timer->target = target;
     
     // If the interrupt was set to a timer that has changed, set new target.
     // If ins is first timer, the timer was put to first place.
@@ -179,26 +182,12 @@ void TimerArrayControl::tick(){
         if (timer->periodic){
 
             // set new target for timer
-            timer->target += timer->delay;
-            timer->target &= max_count;
+            uint32_t target = timer->target;
+            target += timer->delay;
+            target &= max_count;
 
             // find fitting place for timer in string
-            Timer* ins = timer;
-            while(ins->next && ins->next->target < timer->target){
-                // while there are more timers and the next timer's target is sooner than the modified one's
-                // advance |ins| on the timer string
-                ins = ins->next;
-            }
-
-            // only reinsert the timer if it moved
-            if (ins != timer){
-                // remove our timer from the string
-                timerFeed.root.next = timer->next;
-
-                // insert our timer between |ins| and next of |ins|
-                timer->next = ins->next;
-                ins->next = timer;
-            }
+            timerFeed.updateTarget(timer, target);
 
         } else {
             // if timer is not periodic, it is done, we can detach it
@@ -246,29 +235,31 @@ void TimerArrayControl::registerDelayChange(uint32_t cnt, Timer* timer, uint32_t
         return;
     }
 
+    uint32_t target = timer->target;
+
     // if there are not more ticks until the current target is reached then
     // the ticks we try to bring the target early, the new target will be in tha past
-    if ((uint32_t)(max_count & (timer->target - cnt)) <= timer->delay - delay){
+    if ((uint32_t)(max_count & (target - cnt)) <= timer->delay - delay){
         // the requested delay is already passed, skip the callbacks between the start and now
         
         // add the requested delay until the target is in the future
         // arithmetic magic is necessary for correct handling of both 16 and 32 bit counters
-        timer->target -= timer->delay;
+        target -= timer->delay;
         do {
-            timer->target += delay;
-            timer->target &= max_count;
-        } while ((uint32_t)(max_count & (cnt - timer->target)) < (max_count >> 1));
+            target += delay;
+            target &= max_count;
+        } while ((uint32_t)(max_count & (cnt - target)) < (max_count >> 1));
         timer->delay = delay;
 
     } else {
         // the new target will be in the future, set it as usual
-        timer->target += delay - timer->delay;
-        timer->target &= max_count;
+        target += delay - timer->delay;
+        target &= max_count;
         timer->delay = delay;
     }
 
     // update the position of timer in the feed
-    timerFeed.reinsertTimer(timer);
+    timerFeed.updateTarget(timer, target);
 }
 
 void TimerArrayControl::registerAttachedTimerInSync(uint32_t cnt, Timer* timer, Timer* reference){

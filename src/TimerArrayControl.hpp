@@ -118,7 +118,7 @@ protected:
         void insertTimer(Timer* it, Timer* timer);
         void insertTimer(Timer* timer);
         void removeTimer(Timer* timer);
-        void reinsertTimer(Timer* timer);
+        void updateTarget(Timer* timer, uint32_t target);
     };
 
     void tick();

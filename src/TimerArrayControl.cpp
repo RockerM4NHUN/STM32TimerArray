@@ -11,6 +11,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim){
 
 #define __HAL_IS_TIMER_ENABLED(htim) (htim->Instance->CR1 & TIM_CR1_CEN)
 #define __HAL_GENERATE_INTERRUPT(htim, EGR_FLAG) (htim->Instance->EGR |= EGR_FLAG)
+#define COUNTER_MODULO(x) (max_count & ((uint32_t)(x)))
 
 
 // -----                            -----
@@ -235,28 +236,12 @@ void TimerArrayControl::registerDelayChange(uint32_t cnt, Timer* timer, uint32_t
         return;
     }
 
-    uint32_t target = timer->target;
+    // TODO: negative calculation might be also needed, for more complicated cases
+    // calculate start time of timer, then the next firing time, skipping already passed opportunities
+    uint32_t target = COUNTER_MODULO(timer->target - timer->delay);
+    target = calculateNextFireInSync(target, cnt, delay);
 
-    // if there are not more ticks until the current target is reached then
-    // the ticks we try to bring the target early, the new target will be in tha past
-    if ((uint32_t)(max_count & (target - cnt)) <= timer->delay - delay){
-        // the requested delay is already passed, skip the callbacks between the start and now
-        
-        // add the requested delay until the target is in the future
-        // arithmetic magic is necessary for correct handling of both 16 and 32 bit counters
-        target -= timer->delay;
-        do {
-            target += delay;
-            target &= max_count;
-        } while ((uint32_t)(max_count & (cnt - target)) < (max_count >> 1));
-        timer->delay = delay;
-
-    } else {
-        // the new target will be in the future, set it as usual
-        target += delay - timer->delay;
-        target &= max_count;
-        timer->delay = delay;
-    }
+    timer->delay = delay;
 
     // update the position of timer in the feed
     timerFeed.updateTarget(timer, target);
@@ -267,14 +252,10 @@ void TimerArrayControl::registerAttachedTimerInSync(uint32_t cnt, Timer* timer, 
     // won't reattach timer (if attached to this controller, it would be possible)
     if (timer->running) return;
 
-    timer->target = max_count & (reference->target - reference->delay);
-    
-    // add the requested delay until the target is in the future
-    // arithmetic magic is necessary for correct handling of both 16 and 32 bit counters
-    do {
-        timer->target += timer->delay;
-        timer->target &= max_count;
-    } while ((uint32_t)(max_count & (cnt - timer->target)) < (max_count >> 1));
+    // TODO: negative calculation might be also needed, for more complicated cases
+    // put start time in timer's target, find the next firing time with timer's delay
+    timer->target = COUNTER_MODULO(reference->target - reference->delay);
+    timer->target = calculateNextFireInSync(timer->target, cnt, timer->delay);
 
     // find fitting place for timer in string
     timerFeed.insertTimer(timer);
@@ -424,6 +405,14 @@ uint32_t TimerArrayControl::elapsedTicks(Timer* timer) const {
 
 float TimerArrayControl::actualTickFrequency() const {
     return ((float)fclk)/prescaler;
+}
+
+uint32_t TimerArrayControl::calculateNextFireInSync(uint32_t target, uint32_t cnt, uint32_t delay) const{
+    uint32_t diff = COUNTER_MODULO(cnt - target);
+    uint32_t subt = diff - (diff/delay)*delay;
+    uint32_t incr = delay - subt;
+    uint32_t tnext = COUNTER_MODULO(cnt + incr);
+    return tnext;
 }
 
 

@@ -130,6 +130,9 @@ protected:
 
     void f(TIM_HandleTypeDef*);
 
+    // calculate the next target while staying in sync with the previous one and the current time
+    uint32_t calculateNextFireInSync(uint32_t target, uint32_t cnt, uint32_t delay) const;
+
     TimerFeed timerFeed;
 
     // the request variable has to be atomic RW, bytes achieve that

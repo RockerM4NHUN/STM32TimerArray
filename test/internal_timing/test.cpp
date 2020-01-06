@@ -459,6 +459,7 @@ void test_manual_fire_from_interrupt_call_04(){
 void test_single_shot_delay_accuracy_01(){
     TEST_FAIL_MESSAGE("not implemented");
 }
+// TODO: multiple timers firing at once
 
 // -----                                    -----
 // ----- Test a bunch of convoluted actions -----

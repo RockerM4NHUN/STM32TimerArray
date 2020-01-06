@@ -73,7 +73,7 @@ void TimerArrayControl::TimerFeed::updateTarget(Timer* timer, uint32_t target){
     Timer* rem = ins;
 
     // search attach position
-    while(ins->next && ins->next->target < target){
+    while(ins->next && ins->next->target < target){ // TODO: target equality is not straight forward, cnt is needed to determine relation
         // while there are more timers and the next timer's target is sooner than the modified one's
         // advance |ins| on the timer string
         ins = ins->next;
@@ -236,7 +236,7 @@ void TimerArrayControl::registerDelayChange(uint32_t cnt, Timer* timer, uint32_t
         return;
     }
 
-    // TODO: negative calculation might be also needed, for more complicated cases
+    // TODO: negative calculation might be also needed, for some cases, not trivial at all!
     // calculate start time of timer, then the next firing time, skipping already passed opportunities
     uint32_t target = COUNTER_MODULO(timer->target - timer->delay);
     target = calculateNextFireInSync(target, cnt, delay);

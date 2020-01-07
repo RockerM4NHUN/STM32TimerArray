@@ -80,7 +80,7 @@ protected:
 // fcnt: the actual counting frequency based on the settings and limitations
 class TimerArrayControl : TIM_OC_DelayElapsed_CallbackChain{
 public:
-    TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/10000, const uint32_t bits=16);
+    TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/10000, const uint8_t bits=16);
 
     void begin(); // start interrupt generation for the listeners
     void stop(); // halt the hardware timer, stop interrupt generation
@@ -94,31 +94,35 @@ public:
     uint32_t elapsedTicks(Timer* timer) const;
     float actualTickFrequency() const;
 
-    const uint32_t fclk;
-    const uint32_t clkdiv;
-    const uint8_t bits;
-
     static const auto TARGET_CC_CHANNEL = TIM_CHANNEL_1;
     static const auto TARGET_CCIG_FLAG = TIM_EGR_CC1G;
     static const uint8_t prescaler_bits = 16;
     static const auto max_prescale = (1 << prescaler_bits);
 
-    const uint32_t max_count = (1 << bits) - 1;
-    
+    const uint32_t fclk;
+    const uint32_t clkdiv;
     const uint32_t prescaler = clkdiv > max_prescale ? max_prescale : clkdiv;
 
 protected:
     struct TimerFeed{
         Timer root;
         TIM_HandleTypeDef *const htim;
+        const uint8_t bits;
+        const uint32_t max_count = (1 << bits) - 1;
 
-        TimerFeed(TIM_HandleTypeDef *const htim);
+        TimerFeed(TIM_HandleTypeDef *const htim, const uint8_t bits);
         Timer* findTimerInsertionLink(Timer* it, Timer* timer);
         Timer* findTimerInsertionLink(Timer* timer);
         void insertTimer(Timer* it, Timer* timer);
         void insertTimer(Timer* timer);
         void removeTimer(Timer* timer);
-        void updateTarget(Timer* timer, uint32_t target);
+        void updateTarget(Timer* timer, uint32_t target, uint32_t cnt);
+
+        // check if target comes sooner than reference if we are at cnt
+        bool isSooner(uint32_t target, uint32_t reference, uint32_t cnt);
+        
+        // calculate the next target while staying in sync with the previous one and the current time
+        uint32_t calculateNextFireInSync(uint32_t target, uint32_t cnt, uint32_t delay) const;
     };
 
     void tick();
@@ -129,9 +133,6 @@ protected:
     void registerManualFire(uint32_t cnt, Timer* timer);
 
     void f(TIM_HandleTypeDef*);
-
-    // calculate the next target while staying in sync with the previous one and the current time
-    uint32_t calculateNextFireInSync(uint32_t target, uint32_t cnt, uint32_t delay) const;
 
     TimerFeed timerFeed;
 

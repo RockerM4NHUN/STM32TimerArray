@@ -11,14 +11,18 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim){
 
 #define __HAL_IS_TIMER_ENABLED(htim) (htim->Instance->CR1 & TIM_CR1_CEN)
 #define __HAL_GENERATE_INTERRUPT(htim, EGR_FLAG) (htim->Instance->EGR |= EGR_FLAG)
-#define COUNTER_MODULO(x) (max_count & ((uint32_t)(x)))
+#define COUNTER_MODULO(x) (timerFeed.max_count & ((uint32_t)(x)))
 
 
 // -----                            -----
 // ----- TimerString implementation -----
 // -----                            -----
 
-TimerArrayControl::TimerFeed::TimerFeed(TIM_HandleTypeDef *const htim) : root(nullptr), htim(htim) {}
+TimerArrayControl::TimerFeed::TimerFeed(TIM_HandleTypeDef *const htim, const uint8_t bits) :
+    root(nullptr),
+    htim(htim),
+    bits(bits)
+{}
 
 Timer* TimerArrayControl::TimerFeed::findTimerInsertionLink(Timer* it, Timer* timer){
     while(it->next && it->next->target < timer->target){
@@ -66,14 +70,14 @@ void TimerArrayControl::TimerFeed::removeTimer(Timer* timer){
 }
 
 // remove and insert timer in one operation, according to it's target
-void TimerArrayControl::TimerFeed::updateTarget(Timer* timer, uint32_t target){
+void TimerArrayControl::TimerFeed::updateTarget(Timer* timer, uint32_t target, uint32_t cnt){
     
     // find fitting place for timer in string
     Timer* ins = &root;
     Timer* rem = ins;
 
     // search attach position
-    while(ins->next && ins->next->target < target){ // TODO: target equality is not straight forward, cnt is needed to determine relation
+    while(ins->next && isSooner(ins->next->target, target, cnt)){
         // while there are more timers and the next timer's target is sooner than the modified one's
         // advance |ins| on the timer string
         ins = ins->next;
@@ -108,16 +112,19 @@ void TimerArrayControl::TimerFeed::updateTarget(Timer* timer, uint32_t target){
     }
 }
 
+bool TimerArrayControl::TimerFeed::isSooner(uint32_t target, uint32_t reference, uint32_t cnt){
+    return (max_count & ((uint32_t)(target - cnt))) < (max_count & ((uint32_t)(reference - cnt)));
+}
+
 // -----                                  -----
 // ----- TimerArrayControl implementation -----
 // -----                                  -----
 
 
-TimerArrayControl::TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk, const uint32_t clkdiv, const uint32_t bits) : 
+TimerArrayControl::TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk, const uint32_t clkdiv, const uint8_t bits) : 
     fclk(fclk),
     clkdiv(clkdiv),
-    bits(bits),
-    timerFeed(htim),
+    timerFeed(htim, bits),
     request(NONE),
     requestTimer(nullptr),
     requestDelay(0),
@@ -131,7 +138,7 @@ void TimerArrayControl::begin(){
 
     timerFeed.htim->Init.CounterMode = TIM_COUNTERMODE_UP; // all STM32 counters support it
     timerFeed.htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE; // by disabling, write to ARR shadow regs happens immedietely
-    timerFeed.htim->Init.Period = max_count; // set max period for maximum amount of possible delay
+    timerFeed.htim->Init.Period = timerFeed.max_count; // set max period for maximum amount of possible delay
     timerFeed.htim->Init.Prescaler = prescaler - 1; // prescaler divides clock by Prescaler+1
 
     TIM_OC_InitTypeDef oc_init;
@@ -140,7 +147,7 @@ void TimerArrayControl::begin(){
     HAL_TIM_OC_Init(timerFeed.htim);
     HAL_TIM_OC_ConfigChannel(timerFeed.htim, &oc_init, TARGET_CC_CHANNEL);
     uint32_t cnt = __HAL_TIM_GET_COUNTER(timerFeed.htim);
-    uint32_t target = timerFeed.root.next == nullptr ? (max_count & (cnt-1)) : timerFeed.root.next->target;
+    uint32_t target = timerFeed.root.next == nullptr ? (timerFeed.max_count & (cnt-1)) : timerFeed.root.next->target;
     __HAL_TIM_SET_COMPARE(timerFeed.htim, TARGET_CC_CHANNEL, target); // if no timers to fire yet, set max delay between unneeded interrupts
     HAL_TIM_OC_Start_IT(timerFeed.htim, TARGET_CC_CHANNEL);
 }
@@ -185,10 +192,10 @@ void TimerArrayControl::tick(){
             // set new target for timer
             uint32_t target = timer->target;
             target += timer->delay;
-            target &= max_count;
+            target &= timerFeed.max_count;
 
             // find fitting place for timer in string
-            timerFeed.updateTarget(timer, target);
+            timerFeed.updateTarget(timer, target, cnt);
 
         } else {
             // if timer is not periodic, it is done, we can detach it
@@ -199,7 +206,7 @@ void TimerArrayControl::tick(){
         }
 
         // set the new target
-        uint32_t target = timerFeed.root.next == nullptr ? (max_count & (cnt - 1)) : timerFeed.root.next->target;
+        uint32_t target = timerFeed.root.next == nullptr ? (timerFeed.max_count & (cnt - 1)) : timerFeed.root.next->target;
         __HAL_TIM_SET_COMPARE(timerFeed.htim, TARGET_CC_CHANNEL, target);
 
         // fire callback
@@ -218,7 +225,7 @@ void TimerArrayControl::registerAttachedTimer(uint32_t cnt, Timer* timer){
     if (timer->running) return;
 
     // get current time in ticks and add the requested delay to find the target time
-    timer->target = max_count & (timer->delay + cnt);
+    timer->target = COUNTER_MODULO(timer->delay + cnt);
 
     // insert timer based on the target time
     timerFeed.insertTimer(timer);
@@ -239,12 +246,12 @@ void TimerArrayControl::registerDelayChange(uint32_t cnt, Timer* timer, uint32_t
     // TODO: negative calculation might be also needed, for some cases, not trivial at all!
     // calculate start time of timer, then the next firing time, skipping already passed opportunities
     uint32_t target = COUNTER_MODULO(timer->target - timer->delay);
-    target = calculateNextFireInSync(target, cnt, delay);
+    target = timerFeed.calculateNextFireInSync(target, cnt, delay);
 
     timer->delay = delay;
 
     // update the position of timer in the feed
-    timerFeed.updateTarget(timer, target);
+    timerFeed.updateTarget(timer, target, cnt);
 }
 
 void TimerArrayControl::registerAttachedTimerInSync(uint32_t cnt, Timer* timer, Timer* reference){
@@ -255,7 +262,7 @@ void TimerArrayControl::registerAttachedTimerInSync(uint32_t cnt, Timer* timer, 
     // TODO: negative calculation might be also needed, for more complicated cases
     // put start time in timer's target, find the next firing time with timer's delay
     timer->target = COUNTER_MODULO(reference->target - reference->delay);
-    timer->target = calculateNextFireInSync(timer->target, cnt, timer->delay);
+    timer->target = timerFeed.calculateNextFireInSync(timer->target, cnt, timer->delay);
 
     // find fitting place for timer in string
     timerFeed.insertTimer(timer);
@@ -395,7 +402,7 @@ void TimerArrayControl::manualFire(Timer* timer){
 uint32_t TimerArrayControl::remainingTicks(Timer* timer) const {
     if (!timer->running) return 0;
     const uint32_t cnt = __HAL_TIM_GET_COUNTER(timerFeed.htim);
-    return max_count & (timer->target - cnt);
+    return COUNTER_MODULO(timer->target - cnt);
 }
 
 uint32_t TimerArrayControl::elapsedTicks(Timer* timer) const {
@@ -407,11 +414,11 @@ float TimerArrayControl::actualTickFrequency() const {
     return ((float)fclk)/prescaler;
 }
 
-uint32_t TimerArrayControl::calculateNextFireInSync(uint32_t target, uint32_t cnt, uint32_t delay) const{
-    uint32_t diff = COUNTER_MODULO(cnt - target);
+uint32_t TimerArrayControl::TimerFeed::calculateNextFireInSync(uint32_t target, uint32_t cnt, uint32_t delay) const{
+    uint32_t diff = (max_count & ((uint32_t)(cnt - target)));
     uint32_t subt = diff - (diff/delay)*delay;
     uint32_t incr = delay - subt;
-    uint32_t tnext = COUNTER_MODULO(cnt + incr);
+    uint32_t tnext = (max_count & ((uint32_t)(cnt + incr)));
     return tnext;
 }
 

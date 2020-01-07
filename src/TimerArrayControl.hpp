@@ -109,6 +109,7 @@ protected:
         TIM_HandleTypeDef *const htim;
         const uint8_t bits;
         const uint32_t max_count = (1 << bits) - 1;
+        uint32_t cnt; // current value of timer counter (saved to freeze while calculating)
 
         TimerFeed(TIM_HandleTypeDef *const htim, const uint8_t bits);
         Timer* findTimerInsertionLink(Timer* it, Timer* timer);
@@ -116,21 +117,23 @@ protected:
         void insertTimer(Timer* it, Timer* timer);
         void insertTimer(Timer* timer);
         void removeTimer(Timer* timer);
-        void updateTarget(Timer* timer, uint32_t target, uint32_t cnt);
+        void updateTarget(Timer* timer, uint32_t target);
 
         // check if target comes sooner than reference if we are at cnt
-        bool isSooner(uint32_t target, uint32_t reference, uint32_t cnt);
+        bool isSooner(uint32_t target, uint32_t reference);
         
         // calculate the next target while staying in sync with the previous one and the current time
-        uint32_t calculateNextFireInSync(uint32_t target, uint32_t cnt, uint32_t delay) const;
+        uint32_t calculateNextFireInSync(uint32_t target, uint32_t delay) const;
+
+        void fetchCounter();
     };
 
     void tick();
-    void registerAttachedTimer(uint32_t cnt, Timer* timer);
+    void registerAttachedTimer(Timer* timer);
     void registerDetachedTimer(Timer* timer);
-    void registerDelayChange(uint32_t cnt, Timer* timer, uint32_t delay);
-    void registerAttachedTimerInSync(uint32_t cnt, Timer* timer, Timer* reference);
-    void registerManualFire(uint32_t cnt, Timer* timer);
+    void registerDelayChange(Timer* timer, uint32_t delay);
+    void registerAttachedTimerInSync(Timer* timer, Timer* reference);
+    void registerManualFire(Timer* timer);
 
     void f(TIM_HandleTypeDef*);
 

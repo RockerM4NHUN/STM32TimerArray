@@ -284,7 +284,7 @@ void test_timer_feed_updateTarget_01(){
     control.timerFeed.insertTimer(&timer);
 
     // delay in (almost) empty feed
-    control.timerFeed.updateTarget(&timer, 234, cnt);
+    control.timerFeed.updateTarget(&timer, 234);
     TEST_ASSERT_EQUAL_PTR(&timer, control.timerFeed.root.next); // timer is still in the feed
     TEST_ASSERT_EQUAL_PTR(nullptr, timer.next); // timer is not linked
     TEST_ASSERT_TRUE(timer.running);
@@ -301,7 +301,7 @@ void test_timer_feed_updateTarget_02(){
     control.timerFeed.insertTimer(&timer);
 
     // early in (almost) empty feed
-    control.timerFeed.updateTarget(&timer, 12, cnt);
+    control.timerFeed.updateTarget(&timer, 12);
     TEST_ASSERT_EQUAL_PTR(&timer, control.timerFeed.root.next); // timer is still in the feed
     TEST_ASSERT_EQUAL_PTR(nullptr, timer.next); // timer is not linked
     TEST_ASSERT_TRUE(timer.running);
@@ -313,7 +313,7 @@ void test_timer_feed_updateTarget_03(){
     CREATE_FILLED_TIMER_FEED;
 
     // update first place, no change target
-    control.timerFeed.updateTarget(&timers[0], 100, cnt);
+    control.timerFeed.updateTarget(&timers[0], 100);
     TEST_ASSERT_EQUAL_PTR(&timers[0], control.timerFeed.root.next); // timer is still first
     TEST_ASSERT_EQUAL_PTR(&timers[1], timers[0].next); // timer is linked as was before
     TEST_ASSERT_TRUE(timers[0].running);
@@ -325,7 +325,7 @@ void test_timer_feed_updateTarget_04(){
     CREATE_FILLED_TIMER_FEED;
 
     // update first place, early target
-    control.timerFeed.updateTarget(&timers[0], 99, cnt);
+    control.timerFeed.updateTarget(&timers[0], 99);
     TEST_ASSERT_EQUAL_PTR(&timers[0], control.timerFeed.root.next); // timer is still first
     TEST_ASSERT_EQUAL_PTR(&timers[1], timers[0].next); // timer is linked as was before
     TEST_ASSERT_TRUE(timers[0].running);
@@ -337,7 +337,7 @@ void test_timer_feed_updateTarget_05(){
     CREATE_FILLED_TIMER_FEED;
 
     // update first place, slightly delayed target
-    control.timerFeed.updateTarget(&timers[0], 101, cnt);
+    control.timerFeed.updateTarget(&timers[0], 101);
     TEST_ASSERT_EQUAL_PTR(&timers[0], control.timerFeed.root.next); // timer is still first
     TEST_ASSERT_EQUAL_PTR(&timers[1], timers[0].next); // timer is linked as was before
     TEST_ASSERT_TRUE(timers[0].running);
@@ -349,7 +349,7 @@ void test_timer_feed_updateTarget_06(){
     CREATE_FILLED_TIMER_FEED;
 
     // update first place, delayed to mid
-    control.timerFeed.updateTarget(&timers[0], 121, cnt);
+    control.timerFeed.updateTarget(&timers[0], 121);
     TEST_ASSERT_EQUAL_PTR(&timers[1], control.timerFeed.root.next); // timer is not first anymore
     TEST_ASSERT_EQUAL_PTR(&timers[3], timers[0].next); // timer is linked as mid
     TEST_ASSERT_EQUAL_PTR(&timers[0], timers[2].next); // predecessor is linked as mid
@@ -362,7 +362,7 @@ void test_timer_feed_updateTarget_07(){
     CREATE_FILLED_TIMER_FEED;
 
     // update first place, delayed to last
-    control.timerFeed.updateTarget(&timers[0], 141, cnt);
+    control.timerFeed.updateTarget(&timers[0], 141);
     TEST_ASSERT_EQUAL_PTR(&timers[1], control.timerFeed.root.next); // timer is not first anymore
     TEST_ASSERT_EQUAL_PTR(nullptr, timers[0].next); // timer is linked as last
     TEST_ASSERT_EQUAL_PTR(&timers[0], timers[4].next); // predecessor is linked as mid
@@ -375,7 +375,7 @@ void test_timer_feed_updateTarget_08(){
     CREATE_FILLED_TIMER_FEED;
 
     // update mid place, no change target
-    control.timerFeed.updateTarget(&timers[2], 120, cnt);
+    control.timerFeed.updateTarget(&timers[2], 120);
     TEST_ASSERT_EQUAL_PTR(&timers[2], timers[1].next); // timer is still at it's place
     TEST_ASSERT_EQUAL_PTR(&timers[3], timers[2].next); // timer is linked as was before
     TEST_ASSERT_TRUE(timers[2].running);
@@ -387,7 +387,7 @@ void test_timer_feed_updateTarget_09(){
     CREATE_FILLED_TIMER_FEED;
 
     // update mid place, early to first
-    control.timerFeed.updateTarget(&timers[2], 99, cnt);
+    control.timerFeed.updateTarget(&timers[2], 99);
     TEST_ASSERT_EQUAL_PTR(&timers[2], control.timerFeed.root.next); // timer became first
     TEST_ASSERT_EQUAL_PTR(&timers[0], timers[2].next); // timer is linked as first
     TEST_ASSERT_EQUAL_PTR(&timers[3], timers[1].next); // predecessor is linked as mid
@@ -400,7 +400,7 @@ void test_timer_feed_updateTarget_10(){
     CREATE_FILLED_TIMER_FEED;
 
     // update mid place, early to mid
-    control.timerFeed.updateTarget(&timers[3], 119, cnt);
+    control.timerFeed.updateTarget(&timers[3], 119);
     TEST_ASSERT_EQUAL_PTR(&timers[3], timers[1].next); // timer became mid
     TEST_ASSERT_EQUAL_PTR(&timers[2], timers[3].next); // timer is linked as mid
     TEST_ASSERT_EQUAL_PTR(&timers[4], timers[2].next); // predecessor is linked as mid
@@ -413,7 +413,7 @@ void test_timer_feed_updateTarget_11(){
     CREATE_FILLED_TIMER_FEED;
 
     // update mid place, slightly early target
-    control.timerFeed.updateTarget(&timers[2], 119, cnt);
+    control.timerFeed.updateTarget(&timers[2], 119);
     TEST_ASSERT_EQUAL_PTR(&timers[2], timers[1].next); // timer is still at it's place
     TEST_ASSERT_EQUAL_PTR(&timers[3], timers[2].next); // timer is linked as was before
     TEST_ASSERT_TRUE(timers[2].running);
@@ -425,7 +425,7 @@ void test_timer_feed_updateTarget_12(){
     CREATE_FILLED_TIMER_FEED;
 
     // update mid place, slightly delayed target
-    control.timerFeed.updateTarget(&timers[2], 121, cnt);
+    control.timerFeed.updateTarget(&timers[2], 121);
     TEST_ASSERT_EQUAL_PTR(&timers[2], timers[1].next); // timer is still at it's place
     TEST_ASSERT_EQUAL_PTR(&timers[3], timers[2].next); // timer is linked as was before
     TEST_ASSERT_TRUE(timers[2].running);
@@ -437,7 +437,7 @@ void test_timer_feed_updateTarget_13(){
     CREATE_FILLED_TIMER_FEED;
 
     // update mid place, delayed to mid
-    control.timerFeed.updateTarget(&timers[1], 121, cnt);
+    control.timerFeed.updateTarget(&timers[1], 121);
     TEST_ASSERT_EQUAL_PTR(&timers[1], timers[2].next); // timer became mid
     TEST_ASSERT_EQUAL_PTR(&timers[3], timers[1].next); // timer is linked as mid
     TEST_ASSERT_EQUAL_PTR(&timers[2], timers[0].next); // predecessor is linked as mid
@@ -450,7 +450,7 @@ void test_timer_feed_updateTarget_14(){
     CREATE_FILLED_TIMER_FEED;
 
     // update mid place, delayed to last
-    control.timerFeed.updateTarget(&timers[1], 141, cnt);
+    control.timerFeed.updateTarget(&timers[1], 141);
     TEST_ASSERT_EQUAL_PTR(&timers[1], timers[4].next); // timer became last
     TEST_ASSERT_EQUAL_PTR(nullptr, timers[1].next); // timer is linked as last
     TEST_ASSERT_EQUAL_PTR(&timers[2], timers[0].next); // predecessor is linked as mid
@@ -463,7 +463,7 @@ void test_timer_feed_updateTarget_15(){
     CREATE_FILLED_TIMER_FEED;
 
     // update last place, no change target
-    control.timerFeed.updateTarget(&timers[4], 140, cnt);
+    control.timerFeed.updateTarget(&timers[4], 140);
     TEST_ASSERT_EQUAL_PTR(&timers[4], timers[3].next); // timer is still at it's place
     TEST_ASSERT_EQUAL_PTR(nullptr, timers[4].next); // timer is linked as was before
     TEST_ASSERT_TRUE(timers[4].running);
@@ -475,7 +475,7 @@ void test_timer_feed_updateTarget_16(){
     CREATE_FILLED_TIMER_FEED;
 
     // update last place, slightly early target
-    control.timerFeed.updateTarget(&timers[4], 139, cnt);
+    control.timerFeed.updateTarget(&timers[4], 139);
     TEST_ASSERT_EQUAL_PTR(&timers[4], timers[3].next); // timer is still at it's place
     TEST_ASSERT_EQUAL_PTR(nullptr, timers[4].next); // timer is linked as was before
     TEST_ASSERT_TRUE(timers[4].running);
@@ -487,7 +487,7 @@ void test_timer_feed_updateTarget_17(){
     CREATE_FILLED_TIMER_FEED;
 
     // update last place, delayed target
-    control.timerFeed.updateTarget(&timers[4], 141, cnt);
+    control.timerFeed.updateTarget(&timers[4], 141);
     TEST_ASSERT_EQUAL_PTR(&timers[4], timers[3].next); // timer is still at it's place
     TEST_ASSERT_EQUAL_PTR(nullptr, timers[4].next); // timer is linked as was before
     TEST_ASSERT_TRUE(timers[4].running);
@@ -499,7 +499,7 @@ void test_timer_feed_updateTarget_18(){
     CREATE_FILLED_TIMER_FEED;
 
     // update last place, early to mid
-    control.timerFeed.updateTarget(&timers[4], 129, cnt);
+    control.timerFeed.updateTarget(&timers[4], 129);
     TEST_ASSERT_EQUAL_PTR(&timers[4], timers[2].next); // timer became mid
     TEST_ASSERT_EQUAL_PTR(&timers[3], timers[4].next); // timer is linked as mid
     TEST_ASSERT_EQUAL_PTR(nullptr, timers[3].next); // predecessor is linked as last
@@ -512,7 +512,7 @@ void test_timer_feed_updateTarget_19(){
     CREATE_FILLED_TIMER_FEED;
 
     // update last place, early to first
-    control.timerFeed.updateTarget(&timers[4], 99, cnt);
+    control.timerFeed.updateTarget(&timers[4], 99);
     TEST_ASSERT_EQUAL_PTR(&timers[4], control.timerFeed.root.next); // timer became first
     TEST_ASSERT_EQUAL_PTR(&timers[0], timers[4].next); // timer is linked as first
     TEST_ASSERT_EQUAL_PTR(nullptr, timers[3].next); // predecessor is linked as last

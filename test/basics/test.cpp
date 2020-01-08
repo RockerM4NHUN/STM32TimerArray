@@ -96,8 +96,7 @@ void test_fcnt_calculation(){
 
 #define CREATE_EMPTY_TIMER_FEED \
     TIM_TypeDef hw_tim;\
-    uint32_t cnt = 33;\
-    hw_tim.CNT = cnt;\
+    hw_tim.CNT = 33;\
     TIM_HandleTypeDef htim;\
     htim.Instance = &hw_tim;\
     TimerArrayControl control(&htim);\
@@ -105,8 +104,7 @@ void test_fcnt_calculation(){
 
 #define CREATE_FILLED_TIMER_FEED \
     TIM_TypeDef hw_tim;\
-    uint32_t cnt = 33;\
-    hw_tim.CNT = cnt;\
+    hw_tim.CNT = 33;\
     TIM_HandleTypeDef htim;\
     htim.Instance = &hw_tim;\
     TimerArrayControl control(&htim);\
@@ -223,6 +221,65 @@ void test_timer_feed_insertTimer_04(){
     TEST_ASSERT_EQUAL_PTR(nullptr, timer.next); // timer is before end of the feed
     TEST_ASSERT_TRUE(timer.running);
     TEST_ASSERT_EQUAL(100, hw_tim.CCR1); // test if hardware timer's capture/compare register is updated (it should not update to 141, but stay at 100)
+}
+
+void test_timer_feed_insertTimer_05(){
+    CREATE_FILLED_TIMER_FEED;
+    hw_tim.CNT = 60000;
+    control.timerFeed.fetchCounter();
+    Timer timer(5000, false, nullptr);
+    timer.target = 65000;
+
+    control.timerFeed.insertTimer(&timer);
+    TEST_ASSERT_EQUAL_PTR(&timer, control.timerFeed.root.next); // timer is after root
+    TEST_ASSERT_EQUAL_PTR(&timers[0], timer.next); // timer points to previous first
+    TEST_ASSERT_TRUE(timer.running);
+    TEST_ASSERT_EQUAL(65000, hw_tim.CCR1); // test if hardware timer's capture/compare register is updated
+}
+
+void test_timer_feed_insertTimer_06(){
+    CREATE_FILLED_TIMER_FEED;
+    hw_tim.CNT = 60000;
+    control.timerFeed.fetchCounter();
+    Timer timer(5600, false, nullptr);
+    timer.target = 64;
+
+    control.timerFeed.insertTimer(&timer);
+    TEST_ASSERT_EQUAL_PTR(&timer, control.timerFeed.root.next); // timer is after root
+    TEST_ASSERT_EQUAL_PTR(&timers[0], timer.next); // timer points to previous first
+    TEST_ASSERT_TRUE(timer.running);
+    TEST_ASSERT_EQUAL(64, timer.target); // test if target is updated
+    TEST_ASSERT_EQUAL(64, hw_tim.CCR1); // test if hardware timer's capture/compare register is updated
+}
+
+void test_timer_feed_insertTimer_07(){
+    CREATE_FILLED_TIMER_FEED;
+    hw_tim.CNT = 60000;
+    control.timerFeed.fetchCounter();
+    Timer timer(65000, false, nullptr);
+    timer.target = 59464;
+
+    control.timerFeed.insertTimer(&timer);
+    TEST_ASSERT_EQUAL_PTR(&timer, timers[4].next); // timer is after last
+    TEST_ASSERT_EQUAL_PTR(nullptr, timer.next); // timer is new last
+    TEST_ASSERT_TRUE(timer.running);
+    TEST_ASSERT_EQUAL(59464, timer.target); // test if target is updated
+    TEST_ASSERT_EQUAL(100, hw_tim.CCR1); // test if hardware timer's capture/compare register is updated
+}
+
+void test_timer_feed_insertTimer_08(){
+    CREATE_FILLED_TIMER_FEED;
+    hw_tim.CNT = 90;
+    control.timerFeed.fetchCounter();
+    Timer timer(-40, false, nullptr);
+    timer.target = 50;
+
+    control.timerFeed.insertTimer(&timer);
+    TEST_ASSERT_EQUAL_PTR(&timer, timers[4].next); // timer is after last
+    TEST_ASSERT_EQUAL_PTR(nullptr, timer.next); // timer is new last
+    TEST_ASSERT_TRUE(timer.running);
+    TEST_ASSERT_EQUAL(50, timer.target); // test if target is updated
+    TEST_ASSERT_EQUAL(100, hw_tim.CCR1); // test if hardware timer's capture/compare register is updated
 }
 
 void test_timer_feed_removeTimer_01(){
@@ -522,9 +579,51 @@ void test_timer_feed_updateTarget_19(){
 }
 
 void test_timer_feed_updateTarget_20(){
-    // test wraparound in this function, or create another function and use it in this one
-    // and than test 1-2 wraparound cases here too (wraparound in both directions)
-    TEST_FAIL_MESSAGE("not implemented");
+    // ... cnt ... tgt ... | ... [0] ... [1] ... new tgt ... [2] ... [3] ... [4]
+    CREATE_FILLED_TIMER_FEED;
+    hw_tim.CNT = 60000;
+    Timer timer(5000, false, nullptr);
+    control.timerFeed.insertTimer(&timer);
+
+    control.timerFeed.updateTarget(&timer, 111);
+    TEST_ASSERT_EQUAL_PTR(&timers[0], control.timerFeed.root.next); // timer is no longer first
+    TEST_ASSERT_EQUAL_PTR(&timers[2], timer.next); // timer is linked as mid
+    TEST_ASSERT_EQUAL_PTR(&timer, timers[1].next); // predecessor is linked as mid
+    TEST_ASSERT_TRUE(timer.running);
+    TEST_ASSERT_EQUAL(111, timer.target); // target was updated
+    TEST_ASSERT_EQUAL(100, hw_tim.CCR1); // test if capture/compare register was updated
+}
+
+void test_timer_feed_updateTarget_21(){
+    // ... cnt ... | ... tgt ... [0] ... [1] ... new tgt ... [2] ... [3] ... [4]
+    CREATE_FILLED_TIMER_FEED;
+    hw_tim.CNT = -100; // wraps around to 65436
+    Timer timer(190, false, nullptr); // puts target to 90
+    control.timerFeed.insertTimer(&timer);
+
+    control.timerFeed.updateTarget(&timer, 111);
+    TEST_ASSERT_EQUAL_PTR(&timers[0], control.timerFeed.root.next); // timer is no longer first
+    TEST_ASSERT_EQUAL_PTR(&timers[2], timer.next); // timer is linked as mid
+    TEST_ASSERT_EQUAL_PTR(&timer, timers[1].next); // predecessor is linked as mid
+    TEST_ASSERT_TRUE(timer.running);
+    TEST_ASSERT_EQUAL(111, timer.target); // target was updated
+    TEST_ASSERT_EQUAL(100, hw_tim.CCR1); // test if capture/compare register was updated
+}
+
+void test_timer_feed_updateTarget_22(){
+    // ... | ... tgt ... cnt ... [0] ... [1] ... new tgt ... [2] ... [3] ... [4]
+    CREATE_FILLED_TIMER_FEED;
+    hw_tim.CNT = 90;
+    Timer timer(-50, false, nullptr); // from cnt=90 wraps around to target=40
+    control.timerFeed.insertTimer(&timer);
+
+    control.timerFeed.updateTarget(&timer, 111);
+    TEST_ASSERT_EQUAL_PTR(nullptr, timers[4].next); // timer is no longer last
+    TEST_ASSERT_EQUAL_PTR(&timers[2], timer.next); // timer is linked as mid
+    TEST_ASSERT_EQUAL_PTR(&timer, timers[1].next); // predecessor is linked as mid
+    TEST_ASSERT_TRUE(timer.running);
+    TEST_ASSERT_EQUAL(111, timer.target); // target was updated
+    TEST_ASSERT_EQUAL(100, hw_tim.CCR1); // test if capture/compare register was not updated
 }
 
 // -----                -----
@@ -563,6 +662,10 @@ int main() {
     RUN_TEST(test_timer_feed_insertTimer_02);
     RUN_TEST(test_timer_feed_insertTimer_03);
     RUN_TEST(test_timer_feed_insertTimer_04);
+    RUN_TEST(test_timer_feed_insertTimer_05);
+    RUN_TEST(test_timer_feed_insertTimer_06);
+    RUN_TEST(test_timer_feed_insertTimer_07);
+    RUN_TEST(test_timer_feed_insertTimer_08);
 
     RUN_TEST(test_timer_feed_removeTimer_01);
     RUN_TEST(test_timer_feed_removeTimer_02);
@@ -588,6 +691,9 @@ int main() {
     RUN_TEST(test_timer_feed_updateTarget_17);
     RUN_TEST(test_timer_feed_updateTarget_18);
     RUN_TEST(test_timer_feed_updateTarget_19);
+    RUN_TEST(test_timer_feed_updateTarget_20);
+    RUN_TEST(test_timer_feed_updateTarget_21);
+    RUN_TEST(test_timer_feed_updateTarget_22);
 
     UNITY_END();
 

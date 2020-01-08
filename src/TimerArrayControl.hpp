@@ -125,7 +125,7 @@ protected:
         // calculate the next target while staying in sync with the previous one and the current time
         uint32_t calculateNextFireInSync(uint32_t target, uint32_t delay) const;
 
-        void fetchCounter();
+        void updateTime();
     };
 
     void tick();

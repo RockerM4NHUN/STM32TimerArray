@@ -116,7 +116,7 @@ bool TimerArrayControl::TimerFeed::isSooner(uint32_t target, uint32_t reference)
     return (max_count & ((uint32_t)(target - cnt))) < (max_count & ((uint32_t)(reference - cnt)));
 }
 
-void TimerArrayControl::TimerFeed::fetchCounter(){
+void TimerArrayControl::TimerFeed::updateTime(){
     cnt = __HAL_TIM_GET_COUNTER(htim);
 }
 
@@ -217,7 +217,7 @@ void TimerArrayControl::tick(){
         timer->fire();
 
         // refetch the counter, could have changed significantly since the tick's start
-        timerFeed.cnt = __HAL_TIM_GET_COUNTER(timerFeed.htim);
+        timerFeed.updateTime();
     }
 
     isTickOngoing = false;
@@ -309,7 +309,7 @@ void TimerArrayControl::attachTimer(Timer* timer){
         // don't wait for attach to happen, the interrupt will handle it very quickly
     } else {
         // timer is not running, main thread attach is safe, or we are in tick handler, interrupt attach is safe
-        timerFeed.fetchCounter();
+        timerFeed.updateTime();
         registerAttachedTimer(timer);
     }
 
@@ -354,7 +354,7 @@ void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
         // don't wait for delay change to happen, the interrupt will handle it very quickly
     } else {
         // timer is not running, main thread delay change is safe
-        timerFeed.fetchCounter();
+        timerFeed.updateTime();
         registerDelayChange(timer, delay);
     }
 }
@@ -378,7 +378,7 @@ void TimerArrayControl::attachTimerInSync(Timer* timer, Timer* reference){
         // don't wait for attach to happen, the interrupt will handle it very quickly
     } else {
         // timer is not running, main thread attach is safe, or we are in tick handler, interrupt attach is safe
-        timerFeed.fetchCounter();
+        timerFeed.updateTime();
         registerAttachedTimerInSync(timer, reference);
     }
 }
@@ -398,7 +398,7 @@ void TimerArrayControl::manualFire(Timer* timer){
         // don't wait for it to happen, the interrupt will handle it very quickly
     } else {
         // timer is not running, main thread attach is safe, or we are in tick handler, interrupt attach is safe
-        timerFeed.fetchCounter();
+        timerFeed.updateTime();
         registerManualFire(timer);
     }
 }

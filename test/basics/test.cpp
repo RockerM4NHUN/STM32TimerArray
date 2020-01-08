@@ -100,6 +100,7 @@ void test_fcnt_calculation(){
     TIM_HandleTypeDef htim;\
     htim.Instance = &hw_tim;\
     TimerArrayControl control(&htim);\
+    control.timerFeed.updateTime();\
     (void)0 // force semicolon after define
 
 #define CREATE_FILLED_TIMER_FEED \
@@ -108,6 +109,7 @@ void test_fcnt_calculation(){
     TIM_HandleTypeDef htim;\
     htim.Instance = &hw_tim;\
     TimerArrayControl control(&htim);\
+    control.timerFeed.updateTime();\
     Timer timers[5] = {{100,false,0},{110,false,0},{120,false,0},{130,false,0},{140,false,0}};\
     control.timerFeed.root.next = &timers[0];\
     for (uint32_t i = 0; i < sizeof(timers)/sizeof(Timer); ++i) { timers[i].target = timers[i].delay; timers[i].running = true; }\
@@ -226,7 +228,7 @@ void test_timer_feed_insertTimer_04(){
 void test_timer_feed_insertTimer_05(){
     CREATE_FILLED_TIMER_FEED;
     hw_tim.CNT = 60000;
-    control.timerFeed.fetchCounter();
+    control.timerFeed.updateTime();
     Timer timer(5000, false, nullptr);
     timer.target = 65000;
 
@@ -240,7 +242,7 @@ void test_timer_feed_insertTimer_05(){
 void test_timer_feed_insertTimer_06(){
     CREATE_FILLED_TIMER_FEED;
     hw_tim.CNT = 60000;
-    control.timerFeed.fetchCounter();
+    control.timerFeed.updateTime();
     Timer timer(5600, false, nullptr);
     timer.target = 64;
 
@@ -255,7 +257,7 @@ void test_timer_feed_insertTimer_06(){
 void test_timer_feed_insertTimer_07(){
     CREATE_FILLED_TIMER_FEED;
     hw_tim.CNT = 60000;
-    control.timerFeed.fetchCounter();
+    control.timerFeed.updateTime();
     Timer timer(65000, false, nullptr);
     timer.target = 59464;
 
@@ -270,7 +272,7 @@ void test_timer_feed_insertTimer_07(){
 void test_timer_feed_insertTimer_08(){
     CREATE_FILLED_TIMER_FEED;
     hw_tim.CNT = 90;
-    control.timerFeed.fetchCounter();
+    control.timerFeed.updateTime();
     Timer timer(-40, false, nullptr);
     timer.target = 50;
 
@@ -582,6 +584,7 @@ void test_timer_feed_updateTarget_20(){
     // ... cnt ... tgt ... | ... [0] ... [1] ... new tgt ... [2] ... [3] ... [4]
     CREATE_FILLED_TIMER_FEED;
     hw_tim.CNT = 60000;
+    control.timerFeed.updateTime();
     Timer timer(5000, false, nullptr);
     control.timerFeed.insertTimer(&timer);
 
@@ -598,6 +601,7 @@ void test_timer_feed_updateTarget_21(){
     // ... cnt ... | ... tgt ... [0] ... [1] ... new tgt ... [2] ... [3] ... [4]
     CREATE_FILLED_TIMER_FEED;
     hw_tim.CNT = -100; // wraps around to 65436
+    control.timerFeed.updateTime();
     Timer timer(190, false, nullptr); // puts target to 90
     control.timerFeed.insertTimer(&timer);
 
@@ -614,6 +618,7 @@ void test_timer_feed_updateTarget_22(){
     // ... | ... tgt ... cnt ... [0] ... [1] ... new tgt ... [2] ... [3] ... [4]
     CREATE_FILLED_TIMER_FEED;
     hw_tim.CNT = 90;
+    control.timerFeed.updateTime();
     Timer timer(-50, false, nullptr); // from cnt=90 wraps around to target=40
     control.timerFeed.insertTimer(&timer);
 

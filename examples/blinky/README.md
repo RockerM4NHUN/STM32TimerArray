@@ -1,8 +1,9 @@
-# Blink with CubeMX
+# Blinky
 This example shows the basic steps for setting up a timer using STM32TimerArray and CubeMX.\
 A ready to use baseline project is required to continue.
 
-See the `project_setup_with_cubemx` example for getting started and setting up a baseline project.
+See the `project_setup_with_cubemx` example for getting started and setting up a baseline project.\
+If you are experienced with the STM32 HAL environment and with writing setup code, see `project_setup_with_hal`.
 
 ### 1. Configure the hardware
 - Open the STM32CubeMX configuration file.
@@ -12,7 +13,7 @@ See the `project_setup_with_cubemx` example for getting started and setting up a
 - Click *Generate Code* to update settings in source.
 
 ### 2. Setup software
-- Copy the contents of *blink_with_cubemx.cpp* to *src/app.cpp* in your project.
+- Copy the contents of *blinky.cpp* to *src/app.cpp* in your project.
 - Click PlatformIO Upload.
 - The user LED should flash once a second.
 

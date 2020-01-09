@@ -13,13 +13,14 @@
 /*
  * Test features that require a configured timer periphery and test simple
  * timing functionalities of TimerArrayControl, by comparing the timing of
- * SysTick and the library implementation.
+ * SysTick and the library implementation. The result of some tests can 
+ * depend on the fcnt frequency, 10 kHz is safe, 100 kHz is usually safe.
  */
 
 // Test helpers, might be transferred to hwsetup
 static const auto TIM_IT_FLAG = TIM_IT_CC1;
 static const uint32_t fclk = 72'000'000;
-static const uint32_t fcnt = 10'000;
+static const uint32_t fcnt = 100'000; // above 100 kHz test numbers can be off by a few
 static const uint16_t clkdiv = fclk / fcnt;
 static TimerArrayControl* hcontrol = nullptr;
 static bool timerFiredFlag;
@@ -458,9 +459,259 @@ void test_manual_fire_from_interrupt_call_04(){
 // ----- Test timing accuracy -----
 // -----                      -----
 
-void test_single_shot_delay_accuracy_01(){
-    TEST_FAIL_MESSAGE("not implemented");
+uint32_t timeDifference(uint32_t t2, uint32_t t1){ // returns ticks from t1 to t2 in counter modulo
+    return hcontrol->timerFeed.max_count & ((uint32_t)(t2 - t1));
 }
+
+struct stats_t {
+    uint32_t firsttick = 0;
+    uint32_t prevtick = 0;
+    uint32_t int_tick = 0; // integral tick count, adjusted for one period
+    uint32_t period; // the timer's period
+
+    // limits of two sequential fires
+    uint32_t mindelay = -1; // wraparound to maximum value
+    uint32_t maxdelay = 0;
+
+    // limits of integral errors
+    uint32_t int_mindelay = -1; // wraparound to maximum value
+    uint32_t int_maxdelay = 0;
+
+    void reset(TIM_HandleTypeDef* htim, uint32_t _period){
+        period = _period;
+        mindelay = -1;
+        maxdelay = 0;
+        int_mindelay = -1;
+        int_maxdelay = 0;
+        int_tick = period;
+        prevtick = __HAL_TIM_GET_COUNTER(htim);
+        firsttick = prevtick;
+    }
+
+    void update(TIM_HandleTypeDef* htim){
+        uint32_t tick = __HAL_TIM_GET_COUNTER(htim);
+        uint32_t diff = timeDifference(tick, prevtick); // ticks since last callback
+        uint32_t int_diff = int_tick + diff - period;
+
+        mindelay = mindelay > diff ? diff : mindelay;
+        maxdelay = maxdelay < diff ? diff : maxdelay;
+
+        int_mindelay = int_mindelay > int_diff ? int_diff : int_mindelay;
+        int_maxdelay = int_maxdelay < int_diff ? int_diff : int_maxdelay;
+
+        prevtick = tick;
+    }
+} timingStats;
+
+void callbackTimingStats(){
+    timingStats.update(hcontrol->timerFeed.htim);
+}
+
+
+void test_timing_accuracy_01(){
+    // 100 Hz periodic firing
+    const uint32_t delay = fcnt/100;
+
+    // timing tolerances
+    const uint32_t acceptable_earlyness_ticks = 0;
+    const uint32_t acceptable_lateness_ticks = 0;
+    const uint32_t acceptable_integral_earlyness_ticks = 0;
+    const uint32_t acceptable_integral_lateness_ticks = 0;
+
+    TimerArrayControl& control = *hcontrol;
+    Timer timer(delay, true, callbackTimingStats);
+
+    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    control.attachTimer(&timer); // attach timer
+    control.begin(); // start hardware timer
+
+    HAL_Delay(1000); // accumulate results
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - timingStats.mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - timingStats.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.int_maxdelay - delay); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - timingStats.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, timingStats.maxdelay - delay);
+
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - timingStats.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, timingStats.int_maxdelay - delay);
+}
+
+void test_timing_accuracy_02(){
+    // 1 kHz periodic firing
+    const uint32_t delay = fcnt/1000;
+
+    // timing tolerances
+    const uint32_t acceptable_earlyness_ticks = 0;
+    const uint32_t acceptable_lateness_ticks = 0;
+    const uint32_t acceptable_integral_earlyness_ticks = 0;
+    const uint32_t acceptable_integral_lateness_ticks = 0;
+
+    TimerArrayControl& control = *hcontrol;
+    Timer timer(delay, true, callbackTimingStats);
+
+    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    control.attachTimer(&timer); // attach timer
+    control.begin(); // start hardware timer
+
+    HAL_Delay(1000); // accumulate results
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - timingStats.mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - timingStats.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.int_maxdelay - delay); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - timingStats.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, timingStats.maxdelay - delay);
+
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - timingStats.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, timingStats.int_maxdelay - delay);
+}
+
+void test_timing_accuracy_03(){
+    // 10 kHz periodic firing
+    const uint32_t delay = fcnt/10000;
+
+    // timing tolerances
+    const uint32_t acceptable_earlyness_ticks = 0;
+    const uint32_t acceptable_lateness_ticks = 0;
+    const uint32_t acceptable_integral_earlyness_ticks = 0;
+    const uint32_t acceptable_integral_lateness_ticks = 0;
+
+    TimerArrayControl& control = *hcontrol;
+    Timer timer(delay, true, callbackTimingStats);
+
+    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    control.attachTimer(&timer); // attach timer
+    control.begin(); // start hardware timer
+
+    HAL_Delay(1000); // accumulate results
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - timingStats.mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - timingStats.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.int_maxdelay - delay); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - timingStats.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, timingStats.maxdelay - delay);
+
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - timingStats.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, timingStats.int_maxdelay - delay);
+}
+
+void test_timing_accuracy_04(){
+    // 20 kHz periodic firing
+    const uint32_t delay = fcnt/20000;
+
+    // timing tolerances
+    const uint32_t acceptable_earlyness_ticks = 0;
+    const uint32_t acceptable_lateness_ticks = 0;
+    const uint32_t acceptable_integral_earlyness_ticks = 0;
+    const uint32_t acceptable_integral_lateness_ticks = 0;
+
+    TimerArrayControl& control = *hcontrol;
+    Timer timer(delay, true, callbackTimingStats);
+
+    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    control.attachTimer(&timer); // attach timer
+    control.begin(); // start hardware timer
+
+    HAL_Delay(1000); // accumulate results
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - timingStats.mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - timingStats.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.int_maxdelay - delay); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - timingStats.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, timingStats.maxdelay - delay);
+
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - timingStats.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, timingStats.int_maxdelay - delay);
+}
+
+void test_timing_accuracy_05(){
+    // 50 kHz periodic firing
+    const uint32_t delay = fcnt/50000;
+
+    // timing tolerances
+    const uint32_t acceptable_earlyness_ticks = 0;
+    const uint32_t acceptable_lateness_ticks = 0;
+    const uint32_t acceptable_integral_earlyness_ticks = 0;
+    const uint32_t acceptable_integral_lateness_ticks = 0;
+
+    TimerArrayControl& control = *hcontrol;
+    Timer timer(delay, true, callbackTimingStats);
+
+    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    control.attachTimer(&timer); // attach timer
+    control.begin(); // start hardware timer
+
+    HAL_Delay(1000); // accumulate results
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - timingStats.mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - timingStats.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.int_maxdelay - delay); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - timingStats.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, timingStats.maxdelay - delay);
+
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - timingStats.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, timingStats.int_maxdelay - delay);
+}
+
+void test_timing_accuracy_06(){
+    // 100 kHz periodic firing
+    const uint32_t delay = fcnt/100000;
+
+    // timing tolerances
+    const uint32_t acceptable_earlyness_ticks = 0;
+    const uint32_t acceptable_lateness_ticks = 0;
+    const uint32_t acceptable_integral_earlyness_ticks = 0;
+    const uint32_t acceptable_integral_lateness_ticks = 0;
+
+    TimerArrayControl& control = *hcontrol;
+    Timer timer(delay, true, callbackTimingStats);
+
+    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    control.attachTimer(&timer); // attach timer
+    control.begin(); // start hardware timer
+
+    HAL_Delay(1000); // accumulate results
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - timingStats.mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - timingStats.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.int_maxdelay - delay); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - timingStats.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, timingStats.maxdelay - delay);
+
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - timingStats.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, timingStats.int_maxdelay - delay);
+}
+
 // TODO: multiple timers firing at once
 
 // -----                                    -----
@@ -468,7 +719,62 @@ void test_single_shot_delay_accuracy_01(){
 // -----                                    -----
 
 // TODO
-// 3 different convoluted scenarios
+// 3+ different convoluted scenarios
+
+void test_convoluted_actions_01(){ // test rapid attach requests
+    TimerArrayControl& control = *hcontrol;
+    
+    // Timer(delay, periodic, callback)
+    Timer timers[15] = {
+        {50000,false,0},{51000,false,0},{52000,false,0},{53000,false,0},{54000,false,0},
+        {55000,false,0},{56000,false,0},{57000,false,0},{58000,false,0},{59000,false,0},
+        {60000,false,0},{61000,false,0},{62000,false,0},{63000,false,0},{64000,false,0}
+        };
+    
+    for (uint32_t i = 1; i < sizeof(timers)/sizeof(Timer); ++i) {
+        TEST_ASSERT_GREATER_OR_EQUAL_MESSAGE(
+            timers[i-1].delay,
+            timers[i].delay,
+            "targets in 'timers' array is not monotone increasing"
+            );
+    }
+
+    control.begin();
+
+    // not in a cycle to be more rapid
+    control.attachTimer(&timers[0]);
+    control.attachTimer(&timers[1]);
+    control.attachTimer(&timers[2]);
+    control.attachTimer(&timers[3]);
+    control.attachTimer(&timers[4]);
+    control.attachTimer(&timers[5]);
+    control.attachTimer(&timers[6]);
+    control.attachTimer(&timers[7]);
+    control.attachTimer(&timers[8]);
+    control.attachTimer(&timers[9]);
+    control.attachTimer(&timers[10]);
+    control.attachTimer(&timers[11]);
+    control.attachTimer(&timers[12]);
+    control.attachTimer(&timers[13]);
+    control.attachTimer(&timers[14]);
+
+    // we dont actually want timers to fire
+    control.stop();
+
+    char msg[100];
+    for (uint32_t i = 1; i < sizeof(timers)/sizeof(Timer); ++i) {
+
+        sprintf(msg, "timers[%lu].next is not timers[%lu]", i-1, i);
+        TEST_ASSERT_EQUAL_PTR_MESSAGE(
+            &timers[i],
+            timers[i-1].next,
+            msg
+            );
+        
+        sprintf(msg, "timers[%lu] is not running", i);
+        TEST_ASSERT_TRUE_MESSAGE(timers[i].isRunning(), msg);
+    }
+}
 
 // -----                -----
 // ----- Test execution -----
@@ -525,10 +831,15 @@ int main() {
     RUN_TEST(test_manual_fire_from_interrupt_call_04);
 
     // Test timing accuracy
-    // RUN_TEST(test_single_shot_delay_accuracy_01);
+    RUN_TEST(test_timing_accuracy_01);
+    RUN_TEST(test_timing_accuracy_02);
+    RUN_TEST(test_timing_accuracy_03);
+    RUN_TEST(test_timing_accuracy_04);
+    RUN_TEST(test_timing_accuracy_05);
+    // RUN_TEST(test_timing_accuracy_06);
 
     // Test a bunch of convoluted actions
-    // RUN_TEST(test_convoluted_actions_01);
+    RUN_TEST(test_convoluted_actions_01);
     // RUN_TEST(test_convoluted_actions_02);
     // RUN_TEST(test_convoluted_actions_03);
 

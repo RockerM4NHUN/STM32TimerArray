@@ -4,7 +4,6 @@ template<typename ChainID, typename ... Args>
 class CallbackChain{
 public:
     CallbackChain();
-    virtual ~CallbackChain();
     static void fire(Args... args);
 protected:
     static CallbackChain<ChainID, Args...>* last;
@@ -20,15 +19,6 @@ CallbackChain<ChainID, Args...>* CallbackChain<ChainID, Args...>::last = nullptr
 template<typename ChainID, typename ... Args>
 CallbackChain<ChainID, Args...>::CallbackChain() : next(last){
     last = this;
-}
-
-template<typename ChainID, typename ... Args>
-CallbackChain<ChainID, Args...>::~CallbackChain() {
-    CallbackChain<ChainID, Args...>** hnext = &last;
-    while(*hnext != this){
-        hnext = &((*hnext)->next);
-    }
-    *hnext = this->next;
 }
 
 template<typename ChainID, typename ... Args>

@@ -60,28 +60,30 @@ void test_interrupt_blocking_of_request(){
     // if this test fails, all registration tests should fail too
     // passes if the interrupt generated through TimerArrayControl is blocked
 
-
     TimerArrayControl& control = *hcontrol;
-    Timer timer(100, false, timerFiredCallback);
 
     TEST_ASSERT_FALSE(control.timerFeed.htim->Instance->CR1 & TIM_CR1_CEN); // timer was disabled
     control.begin(); // enables timer interrupt
     TEST_ASSERT_TRUE(control.timerFeed.htim->Instance->CR1 & TIM_CR1_CEN); // timer is enabled
     TEST_ASSERT_TRUE(__HAL_TIM_GET_IT_SOURCE(control.timerFeed.htim, TIM_IT_FLAG)); // timer interrupt was enabled
-    __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_FLAG); // disable timer interrupt, to prevent tick
+    __HAL_TIM_DISABLE_IT(control.timerFeed.htim, TIM_IT_FLAG); // disable timer interrupt, to prevent tick
     
-    // test for misconfigured controller, if fails the test setup is wrong
-    TEST_ASSERT_EQUAL_PTR(0, control.timerFeed.root.next);
+    // set interrupt to near future, so the flag will be set, when re-enabled the interrupt will happen
+    control.timerFeed.htim->Instance->CCR1 = 2 + __HAL_TIM_GET_COUNTER(control.timerFeed.htim);
 
-    // test for actual interrupt blocking, if fails the handler was called
-    control.attachTimer(&timer);
-    TEST_ASSERT_EQUAL_PTR(0, control.timerFeed.root.next);
-    
-    // test for reintroduction of the cached interrupt,
-    // if fails the problem can also be in the attachTimer functionality
-    __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_FLAG); // enable timer interrupt, to serve the attach request
-    HAL_Delay(0); // add some cycles for interrupt to kick in
-    TEST_ASSERT_EQUAL_PTR(&timer, control.timerFeed.root.next);
+    {
+        TIM_HandleTypeDef* testHandle = 0;
+        volatile uint8_t testFlag = 0;
+        TestCallbackChainFire obj(&testHandle, (uint8_t*)&testFlag); // register callback handler
+
+        HAL_Delay(10); // add some cycles for interrupt to kick in (10 ms to be really sure)
+        TEST_ASSERT_EQUAL(0, testFlag); // test if callback was fired
+        
+        // test for reintroduction of the cached interrupt
+        __HAL_TIM_ENABLE_IT(control.timerFeed.htim, TIM_IT_FLAG); // enable timer interrupt, to generate callback
+        HAL_Delay(0); // add some CPU cycles for interrupt to kick in
+        TEST_ASSERT_EQUAL(1, testFlag); // test if callback was fired
+    }
 }
 
 // -----                               -----

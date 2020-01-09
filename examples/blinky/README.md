@@ -13,7 +13,7 @@ If you are experienced with the STM32 HAL environment and with writing setup cod
 - Click *Generate Code* to update settings in source.
 
 ### 2. Setup software
-- Copy the contents of *app.cpp* to *src/app.cpp* in your project.
+- Copy the contents of *blinky.cpp* to *src/app.cpp* in your project.
 - Click PlatformIO Upload.
 - The user LED should flash once a second.
 

@@ -16,7 +16,7 @@ You will need to install VSCode and the PlatformIO extension for VSCode before p
 
 ### 3. Compile with STM32TimerArray library example setup
 - In the *platformio.ini* file add: `lib_deps = STM32TimerArray`
-- From the folder of this readme file copy *app.cpp* to *src*, *app.h* to *include*.
+- Copy the contents of *project_setup_with_hal.cpp* to *src/app.cpp*, *app.h* to *include*.
 - Copy *stm32_hal.h* to *include* and update the contents according to your board and CPU.
 - Include `app.h` and add `app_start();` in your main function.
 - (For C++ headers use .hpp extension to have correct VSCode language detection).
@@ -24,7 +24,7 @@ You will need to install VSCode and the PlatformIO extension for VSCode before p
 - Optionally if you want to use the PIO Monitor for serial communication, add this: `monitor_speed = 115200` (and setup your UART periphery accordingly).
 
 ### 4. Run examples
-- Follow the periphery setup instructions in the example's readme file, copy *app.cpp* provided for the example to *src* (overwriting this example).
+- Follow the periphery setup instructions in the example's readme file, copy the contents of *\<example>.cpp* to *src/app.cpp*.
 - Connect your STM32 board.
 - Click PlatformIO Upload.
 - The project should compile, upload and execute.

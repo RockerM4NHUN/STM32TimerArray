@@ -28,7 +28,7 @@ You will need to install VSCode, STM32CubeMX and the PlatformIO extension for VS
 
 ### 4. Compile with the STM32TimerArray library
 - In the *platformio.ini* file add: `lib_deps = STM32TimerArray`
-- From the folder of the readme file copy *app.cpp* to *src* and *app.h* to *Inc*
+- From the folder of this readme file copy *app.cpp* to *src*, *app.h* and *stm32_hal.h* to *Inc*
 - In *src/main.c* add `#include "app.h"` between `/* USER CODE BEGIN Includes */` and `/* USER CODE END Includes */`.
 - Also add `app_start();` between `/* USER CODE BEGIN 2 */` and `/* USER CODE END 2 */`, before the while loop in the main function.
 - (For C++ headers use .hpp extension to have correct VSCode language detection).

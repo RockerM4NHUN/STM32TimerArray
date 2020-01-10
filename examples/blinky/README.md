@@ -15,7 +15,7 @@ If you are experienced with the STM32 HAL environment and with writing setup cod
 ### 2. Setup software
 - Copy the contents of *blinky.cpp* to *src/app.cpp* in your project.
 - Click PlatformIO Upload.
-- The user LED should flash once a second.
+- The user LED should flash once a second, for 5 seconds.
 
 ### 3. Modify the code
 - Change the delay of `t_toggle` to 50 ticks, and reupload.

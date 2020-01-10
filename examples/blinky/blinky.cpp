@@ -25,7 +25,7 @@ uint32_t timerCounterBits = 16;
 
 // instantiate the controller
 TimerArrayControl control(
-    &htim2,	// handle for the used timer hardware, setup by CubeMX
+    &htim2, // handle for the used timer hardware, setup by CubeMX
     timerInputFrequency,
     frequencyDivision,
     timerCounterBits);
@@ -42,10 +42,23 @@ Timer t_toggle(
     toggle_led // pointer to the static callback function
 );
 
+void stop_toggle(){
+    // stop toggle timer
+    control.detachTimer(&t_toggle);
+
+    // turn off LED
+    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+}
+
+Timer t_stop(
+    50000, // 5 sec delay, since |timerCounterBits| was set to 16, the maximum delay is 6.5 seconds (65535 ticks)
+    false, // one shot timer, when fires, it is automatically detached
+    stop_toggle
+);
 
 void app_start(){
-	
-	
+
+    
     // Attach before begin is also valid and a good way to synchronize timers at startup.
     // control.attachTimer(&t_toggle);
 
@@ -55,7 +68,13 @@ void app_start(){
     // Initiate half second toggle, meaning 1 Hz blinking.
     // 0.1 ms (millisecond) per tick counting multiplied by 5000 ticks is 500 ms or 0.5 sec.
     control.attachTimer(&t_toggle);
-	
-    // Lay back, the timer callback is set, interrupts will handle everything.
+
+    // Initiate stop of blinking, use a special function to synchronize timer callbacks
+    control.attachTimerInSync(&t_stop, &t_toggle);
+    
+    // This would work too synchronization in this case is not necessary.
+    // control.attachTimer(&t_stop);
+    
+    // Lay back, the timer callbacks are set, interrupts will handle everything.
     while(1);
 }

@@ -49,13 +49,13 @@ void app_start(){
     // Attach before begin is also valid and a good way to synchronize timers at startup.
     // control.attachTimer(&t_toggle);
 
-    // Start timer array configured to run at 1 kHz (tick frequency).
+    // Start timer array configured to run at 10 kHz (tick frequency).
     control.begin();
 
     // Initiate half second toggle, meaning 1 Hz blinking.
-	// 0.1 ms (millisecond) per tick counting multiplied by 5000 ticks is 500 ms or 0.5 sec.
+    // 0.1 ms (millisecond) per tick counting multiplied by 5000 ticks is 500 ms or 0.5 sec.
     control.attachTimer(&t_toggle);
 	
-	// Lay back, the timer callback is set, interrupts will handle everything.
-	while(1);
+    // Lay back, the timer callback is set, interrupts will handle everything.
+    while(1);
 }

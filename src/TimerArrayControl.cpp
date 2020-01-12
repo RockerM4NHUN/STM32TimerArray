@@ -187,7 +187,7 @@ void TimerArrayControl::tick(){
     request = NONE;
 
     // handle timeout
-    while (COUNTER_MODULO(timerFeed.cnt - timerFeed.root.next->target) < CALLBACK_JITTER){
+    while (timerFeed.root.next && COUNTER_MODULO(timerFeed.cnt - timerFeed.root.next->target) < CALLBACK_JITTER){
         Timer* timer = timerFeed.root.next;
 
         // set up the next interrupt generation

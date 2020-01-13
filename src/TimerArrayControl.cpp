@@ -120,6 +120,14 @@ void TimerArrayControl::TimerFeed::updateTime(){
     cnt = __HAL_TIM_GET_COUNTER(htim);
 }
 
+uint32_t TimerArrayControl::TimerFeed::calculateNextFireInSync(uint32_t target, uint32_t delay) const{
+    uint32_t diff = (max_count & ((uint32_t)(cnt - target)));
+    uint32_t subt = diff - (diff/delay)*delay;
+    uint32_t incr = delay - subt;
+    uint32_t tnext = (max_count & ((uint32_t)(cnt + incr)));
+    return tnext;
+}
+
 // -----                                  -----
 // ----- TimerArrayControl implementation -----
 // -----                                  -----
@@ -247,10 +255,18 @@ void TimerArrayControl::registerDelayChange(Timer* timer, uint32_t delay){
         return;
     }
 
-    // TODO: negative calculation might be also needed, for some cases, not trivial at all!
-    // calculate start time of timer, then the next firing time, skipping already passed opportunities
-    uint32_t target = COUNTER_MODULO(timer->target - timer->delay);
-    target = timerFeed.calculateNextFireInSync(target, delay);
+    uint32_t target;
+    
+    if (elapsedTicks(timer) > delay){
+        // according to the new delay the timer should have been fired, fire it immedietely
+        timer->fire(); // firing will ruin timer synchrony
+        target = COUNTER_MODULO(timerFeed.cnt + delay); // new target is counted from now
+    } else {
+        // the timer will be fired in the future
+        // since the target will certainly increase, delay - timer->delay is positive,
+        // no special handling is needed
+        target = COUNTER_MODULO(timer->target + delay - timer->delay);
+    }
 
     timer->delay = delay;
 
@@ -416,14 +432,6 @@ uint32_t TimerArrayControl::elapsedTicks(Timer* timer) const {
 
 float TimerArrayControl::actualTickFrequency() const {
     return ((float)fclk)/prescaler;
-}
-
-uint32_t TimerArrayControl::TimerFeed::calculateNextFireInSync(uint32_t target, uint32_t delay) const{
-    uint32_t diff = (max_count & ((uint32_t)(cnt - target)));
-    uint32_t subt = diff - (diff/delay)*delay;
-    uint32_t incr = delay - subt;
-    uint32_t tnext = (max_count & ((uint32_t)(cnt + incr)));
-    return tnext;
 }
 
 

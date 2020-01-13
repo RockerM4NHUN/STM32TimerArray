@@ -86,7 +86,7 @@ public:
     void stop(); // halt the hardware timer, stop interrupt generation
     void attachTimer(Timer* timer); // add a timer to the array, when it fires, the callback function is called
     void detachTimer(Timer* timer); // remove a timer from the array, stopping the callback event
-    void changeTimerDelay(Timer* timer, uint32_t delay); // change the delay of the timer without changing the start time
+    void changeTimerDelay(Timer* timer, uint32_t delay); // change the delay of the timer, fire if necessary (ruining synchrony)
     void attachTimerInSync(Timer* timer, Timer* reference); // add timer to the array, like it was attached the same time as the reference timer
     void manualFire(Timer* timer);
 

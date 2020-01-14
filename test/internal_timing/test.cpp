@@ -776,6 +776,22 @@ void test_convoluted_actions_01(){ // test rapid attach requests
     }
 }
 
+
+void test_convoluted_actions_02(){ // test firing on empty feed
+    TimerArrayControl& control = *hcontrol;
+    
+    Timer timer(10, false, 0);
+
+    control.attachTimer(&timer);
+    control.begin();
+    control.detachTimer(&timer);
+    control.isTickOngoing = true; // won't affect tick but indicates if tick was executed
+    uint32_t time = HAL_GetTick();
+    while(control.isTickOngoing && HAL_GetTick() - time < 6600); // wait for actual fire
+
+    TEST_ASSERT_FALSE(control.isTickOngoing);
+}
+
 // -----                -----
 // ----- Test execution -----
 // -----                -----
@@ -840,7 +856,7 @@ int main() {
 
     // Test a bunch of convoluted actions
     RUN_TEST(test_convoluted_actions_01);
-    // RUN_TEST(test_convoluted_actions_02);
+    RUN_TEST(test_convoluted_actions_02);
     // RUN_TEST(test_convoluted_actions_03);
 
     UNITY_END();

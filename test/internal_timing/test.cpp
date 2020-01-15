@@ -803,6 +803,116 @@ void test_timing_accuracy_08(){
     TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, stats1000.int_maxdelay - delay1000);
 }
 
+void test_timing_accuracy_09(){
+    // 100 Hz sleep
+    const uint32_t delay =  fcnt/100;
+
+    // timing tolerances (on a >= 100kHz clock)
+    TEST_ASSERT_GREATER_OR_EQUAL(100'000, fcnt);
+    const uint32_t acceptable_earlyness_ticks = 0;
+    const uint32_t acceptable_lateness_ticks = 0;
+    const uint32_t acceptable_integral_earlyness_ticks = 0;
+    const uint32_t acceptable_integral_lateness_ticks = 0;
+
+    TimerArrayControl& control = *hcontrol;
+
+    control.begin(); // start hardware timer
+    
+    timingStats.reset(control.timerFeed.htim, delay);
+    uint32_t time = HAL_GetTick();
+    uint32_t cycles = 0;
+
+    while(HAL_GetTick() - time < 1000){
+        control.sleep(delay);
+        timingStats.update(control.timerFeed.htim);
+        ++cycles;
+    }
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - timingStats.mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - timingStats.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.int_maxdelay - delay); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_EQUAL(100, cycles);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - timingStats.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, timingStats.maxdelay - delay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - timingStats.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, timingStats.int_maxdelay - delay);
+}
+
+void test_timing_accuracy_10(){
+    // 1 kHz sleep
+    const uint32_t delay =  fcnt/1000;
+
+    // timing tolerances (on a >= 100kHz clock)
+    TEST_ASSERT_GREATER_OR_EQUAL(100'000, fcnt);
+    const uint32_t acceptable_earlyness_ticks = 0;
+    const uint32_t acceptable_lateness_ticks = 0;
+    const uint32_t acceptable_integral_earlyness_ticks = 0;
+    const uint32_t acceptable_integral_lateness_ticks = 0;
+
+    TimerArrayControl& control = *hcontrol;
+
+    control.begin(); // start hardware timer
+    
+    timingStats.reset(control.timerFeed.htim, delay);
+    uint32_t time = HAL_GetTick();
+    uint32_t cycles = 0;
+
+    while(HAL_GetTick() - time < 1000){
+        control.sleep(delay);
+        timingStats.update(control.timerFeed.htim);
+        ++cycles;
+    }
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - timingStats.mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - timingStats.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(timingStats.int_maxdelay - delay); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_EQUAL(1000, cycles);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - timingStats.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, timingStats.maxdelay - delay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - timingStats.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, timingStats.int_maxdelay - delay);
+}
+
+void test_timing_accuracy_11(){
+    // 1 Hz sleep (longer than max timer delay!)
+    const uint32_t delay =  fcnt/1;
+
+    TimerArrayControl& control = *hcontrol;
+
+    // timing tolerances (on a >= 100kHz clock)
+    TEST_ASSERT_GREATER_OR_EQUAL(100'000, fcnt);
+    TEST_ASSERT_LESS_THAN(100'000, control.timerFeed.max_count);
+    const uint32_t acceptable_hal_earlyness_ticks = 0;
+    const uint32_t acceptable_hal_lateness_ticks = 0;
+
+    control.begin(); // start hardware timer
+    
+    uint32_t hal_delay = HAL_GetTick();
+
+    control.sleep(delay);
+    hal_delay = HAL_GetTick() - hal_delay;    
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(1000 - hal_delay); UnityPrint(",");
+    UnityPrintNumber(hal_delay - 1000); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_hal_earlyness_ticks, 1000 - hal_delay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_hal_lateness_ticks, hal_delay - 1000);
+}
+
+
 // -----                                    -----
 // ----- Test a bunch of convoluted actions -----
 // -----                                    -----
@@ -935,15 +1045,20 @@ int main() {
     RUN_TEST(test_manual_fire_from_interrupt_call_03);
     RUN_TEST(test_manual_fire_from_interrupt_call_04);
 
-    // Test timing accuracy
-    RUN_TEST(test_timing_accuracy_01);
-    RUN_TEST(test_timing_accuracy_02);
-    RUN_TEST(test_timing_accuracy_03);
-    RUN_TEST(test_timing_accuracy_04);
-    RUN_TEST(test_timing_accuracy_05);
-    // RUN_TEST(test_timing_accuracy_06);
-    RUN_TEST(test_timing_accuracy_07);
-    RUN_TEST(test_timing_accuracy_08);
+    // Test timing accuracy, run 3 times to have some confidence
+    for (int i = 0; i < 3; ++i) {
+        RUN_TEST(test_timing_accuracy_01);
+        RUN_TEST(test_timing_accuracy_02);
+        RUN_TEST(test_timing_accuracy_03);
+        RUN_TEST(test_timing_accuracy_04);
+        RUN_TEST(test_timing_accuracy_05);
+        // RUN_TEST(test_timing_accuracy_06);
+        RUN_TEST(test_timing_accuracy_07);
+        RUN_TEST(test_timing_accuracy_08);
+        RUN_TEST(test_timing_accuracy_09);
+        RUN_TEST(test_timing_accuracy_10);
+        RUN_TEST(test_timing_accuracy_11);
+    }
 
     // Test a bunch of convoluted actions
     RUN_TEST(test_convoluted_actions_01);

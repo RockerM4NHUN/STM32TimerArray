@@ -423,6 +423,30 @@ void TimerArrayControl::manualFire(Timer* timer){
     }
 }
 
+
+bool TimerArrayControl::isRunning() const{
+    return __HAL_IS_TIMER_ENABLED(timerFeed.htim);
+}
+
+
+void TimerArrayControl::sleep(uint32_t ticks) const{
+    if (!isRunning()) return;
+
+    uint32_t prev = __HAL_TIM_GET_COUNTER(timerFeed.htim);
+    uint32_t diff;
+    while(1){
+        diff = __HAL_TIM_GET_COUNTER(timerFeed.htim) - prev;
+
+        // if the remaining ticks are not more than the time passed between checks, return
+        // simply: more time passed than ticks were remaining
+        if (diff >= ticks) return;
+        
+        ticks -= diff;
+        prev = diff + prev;
+    }
+}
+
+
 uint32_t TimerArrayControl::remainingTicks(Timer* timer) const {
     if (!timer->running) return 0;
     const uint32_t cnt = __HAL_TIM_GET_COUNTER(timerFeed.htim);

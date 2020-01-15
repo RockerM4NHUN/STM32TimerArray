@@ -38,9 +38,12 @@ public:
     void attachTimerInSync(Timer* timer, Timer* reference); // add timer to the array, like it was attached the same time as the reference timer
     void manualFire(Timer* timer);
 
+    void sleep(uint32_t ticks) const; // waits for the given amount of ticks to pass
+
     uint32_t remainingTicks(Timer* timer) const;
     uint32_t elapsedTicks(Timer* timer) const;
     float actualTickFrequency() const;
+    bool isRunning() const;
 
     static const auto TARGET_CC_CHANNEL = TIM_CHANNEL_1;
     static const auto TARGET_CCIG_FLAG = TIM_EGR_CC1G;

@@ -112,9 +112,9 @@ void test_fcnt_calculation(){
     control.timerFeed.updateTime();\
     Timer timers[5] = {{100,false,0},{110,false,0},{120,false,0},{130,false,0},{140,false,0}};\
     control.timerFeed.root.next = &timers[0];\
-    for (uint32_t i = 0; i < sizeof(timers)/sizeof(Timer); ++i) { timers[i].target = timers[i].delay; timers[i].running = true; }\
+    for (uint32_t i = 0; i < sizeof(timers)/sizeof(Timer); ++i) { timers[i].target = timers[i].delay(); timers[i].running = true; }\
     control.timerFeed.htim->Instance->CCR1 = timers[0].target;\
-    for (uint32_t i = 1; i < sizeof(timers)/sizeof(Timer); ++i) TEST_ASSERT_GREATER_OR_EQUAL_MESSAGE(timers[i-1].delay, timers[i].delay, "targets in 'timers' array is not monotone increasing");\
+    for (uint32_t i = 1; i < sizeof(timers)/sizeof(Timer); ++i) TEST_ASSERT_GREATER_OR_EQUAL_MESSAGE(timers[i-1].delay(), timers[i].delay(), "targets in 'timers' array is not monotone increasing");\
     for (uint32_t i = 1; i < sizeof(timers)/sizeof(Timer); ++i) timers[i-1].next = &timers[i];\
     (void)0 // force semicolon after define
 

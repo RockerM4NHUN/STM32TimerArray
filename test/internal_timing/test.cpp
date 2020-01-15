@@ -36,7 +36,7 @@ struct TestCallbackChainFire : TIM_OC_DelayElapsed_CallbackChain{
     TIM_HandleTypeDef** handle;
     uint8_t* hflag;
     TestCallbackChainFire(TIM_HandleTypeDef** _handle, uint8_t* _hflag) : handle(_handle), hflag(_hflag) {}
-    void f(TIM_HandleTypeDef* htim){ *handle = htim; *hflag = 1; }
+    void chainedCallback(TIM_HandleTypeDef* htim){ *handle = htim; *hflag = 1; }
 };
 void test_callback_chain_ctor_and_dtor(){
     TIM_HandleTypeDef* testHandle = 0;
@@ -200,7 +200,7 @@ void test_delay_change_from_direct_call_01(){
     // target should be 300
 
     control.changeTimerDelay(&timer, 123);
-    TEST_ASSERT_EQUAL(123, timer.delay); // the delay was updated
+    TEST_ASSERT_EQUAL(123, timer.delay()); // the delay was updated
     TEST_ASSERT_EQUAL(323, timer.target); // extending the timer by 23 ticks delays the original target
     TEST_ASSERT_EQUAL_PTR(&timer, control.timerFeed.root.next); // the timer is still attached
     TEST_ASSERT_EQUAL_PTR(0, control.timerFeed.root.next->next); // there is only one timer attached
@@ -343,7 +343,7 @@ void test_delay_change_from_interrupt_call_01(){
     control.changeTimerDelay(&timer, 123);
     idleOnDummy(); // dummy write, to give some time to interrupt generation before testing results
     
-    TEST_ASSERT_EQUAL(123, timer.delay); // the delay was updated
+    TEST_ASSERT_EQUAL(123, timer.delay()); // the delay was updated
     TEST_ASSERT_EQUAL(323, timer.target); // extending the timer by 23 ticks delays the original target
     TEST_ASSERT_EQUAL_PTR(&timer, control.timerFeed.root.next); // the timer is still attached
     TEST_ASSERT_EQUAL_PTR(0, control.timerFeed.root.next->next); // there is only one timer attached
@@ -822,8 +822,8 @@ void test_convoluted_actions_01(){ // test rapid attach requests
     
     for (uint32_t i = 1; i < sizeof(timers)/sizeof(Timer); ++i) {
         TEST_ASSERT_GREATER_OR_EQUAL_MESSAGE(
-            timers[i-1].delay,
-            timers[i].delay,
+            timers[i-1].delay(),
+            timers[i].delay(),
             "targets in 'timers' array is not monotone increasing"
             );
     }

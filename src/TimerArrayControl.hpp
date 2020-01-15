@@ -83,7 +83,7 @@ protected:
     void registerAttachedTimerInSync(Timer* timer, Timer* reference);
     void registerManualFire(Timer* timer);
 
-    void f(TIM_HandleTypeDef*);
+    void chainedCallback(TIM_HandleTypeDef*);
 
     TimerFeed timerFeed;
 

@@ -27,15 +27,20 @@ public:
     Timer(uint32_t delay, bool periodic, const callback_function f);
     
     bool isRunning();
+    bool isPeriodic();
+    uint32_t delay();
+
+    void periodic(bool val);
+    void delay(uint32_t val);
 
     // Changing the timers delay will not affect the current firing event, only the next one.
     // To restart the timer with the new delay, detach and attach it.
     // To change the timer's delay without restart, use the changeTimerDelay method
     // in the TimerArrayControl.
-    uint32_t delay; // required delay of timer (in ticks)
-    bool periodic; // should the timer be immedietely restarted after firing
 
 protected:
+    uint32_t _delay; // required delay of timer (in ticks)
+    bool _periodic; // should the timer be immedietely restarted after firing
     uint32_t target; // counter value that the timer fires at next
     void *const f; // WARNING: unsafe if you force the call of a certain fire method instead of letting the inheritance decide
     bool running;

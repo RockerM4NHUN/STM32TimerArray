@@ -199,11 +199,11 @@ void TimerArrayControl::tick(){
         Timer* timer = timerFeed.root.next;
 
         // set up the next interrupt generation
-        if (timer->periodic){
+        if (timer->_periodic){
 
             // set new target for timer
             uint32_t target = timer->target;
-            target += timer->delay;
+            target += timer->_delay;
             target &= timerFeed.max_count;
 
             // find fitting place for timer in string
@@ -237,7 +237,7 @@ void TimerArrayControl::registerAttachedTimer(Timer* timer){
     if (timer->running) return;
 
     // get current time in ticks and add the requested delay to find the target time
-    timer->target = COUNTER_MODULO(timer->delay + timerFeed.cnt);
+    timer->target = COUNTER_MODULO(timer->_delay + timerFeed.cnt);
 
     // insert timer based on the target time
     timerFeed.insertTimer(timer);
@@ -251,7 +251,7 @@ void TimerArrayControl::registerDetachedTimer(Timer* timer){
 void TimerArrayControl::registerDelayChange(Timer* timer, uint32_t delay){
 
     if (!timer->running) {
-        timer->delay = delay;
+        timer->_delay = delay;
         return;
     }
 
@@ -265,10 +265,10 @@ void TimerArrayControl::registerDelayChange(Timer* timer, uint32_t delay){
         // the timer will be fired in the future
         // since the target will certainly increase, delay - timer->delay is positive,
         // no special handling is needed
-        target = COUNTER_MODULO(timer->target + delay - timer->delay);
+        target = COUNTER_MODULO(timer->target + delay - timer->_delay);
     }
 
-    timer->delay = delay;
+    timer->_delay = delay;
 
     // update the position of timer in the feed
     timerFeed.updateTarget(timer, target);
@@ -281,8 +281,8 @@ void TimerArrayControl::registerAttachedTimerInSync(Timer* timer, Timer* referen
 
     // TODO: negative calculation might be also needed, for more complicated cases
     // put start time in timer's target, find the next firing time with timer's delay
-    timer->target = COUNTER_MODULO(reference->target - reference->delay);
-    timer->target = timerFeed.calculateNextFireInSync(timer->target, timer->delay);
+    timer->target = COUNTER_MODULO(reference->target - reference->_delay);
+    timer->target = timerFeed.calculateNextFireInSync(timer->target, timer->_delay);
 
     // find fitting place for timer in string
     timerFeed.insertTimer(timer);
@@ -298,7 +298,7 @@ void TimerArrayControl::registerManualFire(Timer* timer){
     if (timer->running) timerFeed.removeTimer(timer);
 
     // if timer is periodic, restart it at this moment
-    if (timer->periodic){
+    if (timer->_periodic){
         timer->running = false;
         registerAttachedTimer(timer);
     }
@@ -427,7 +427,7 @@ uint32_t TimerArrayControl::remainingTicks(Timer* timer) const {
 
 uint32_t TimerArrayControl::elapsedTicks(Timer* timer) const {
     if (!timer->running) return 0;
-    return timer->delay - remainingTicks(timer);
+    return timer->_delay - remainingTicks(timer);
 }
 
 float TimerArrayControl::actualTickFrequency() const {
@@ -440,15 +440,33 @@ float TimerArrayControl::actualTickFrequency() const {
 // -----                      -----
 
 Timer::Timer(const callback_function f)
-    : delay(10), periodic(false), f((void*)f), running(false), next(nullptr)
+    : _delay(10), _periodic(false), f((void*)f), running(false), next(nullptr)
 {}
 
 Timer::Timer(uint32_t delay, bool isPeriodic, const callback_function f)
-    : delay(delay), periodic(isPeriodic), f((void*)f), running(false), next(nullptr)
+    : _delay(delay), _periodic(isPeriodic), f((void*)f), running(false), next(nullptr)
 {}
 
 bool Timer::isRunning(){
     return running;
+}
+
+bool Timer::isPeriodic(){
+    return _periodic;
+}
+
+uint32_t Timer::delay(){
+    return _delay;
+}
+
+void Timer::periodic(bool val){
+    if (running) return; // can't change parameters directly if running
+    _periodic = val;
+}
+
+void Timer::delay(uint32_t val){
+    if (running) return; // can't change parameters directly if running
+    _delay = val;
 }
 
 void Timer::fire(){

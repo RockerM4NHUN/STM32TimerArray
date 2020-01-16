@@ -8,7 +8,7 @@
 
 #include "STM32TimerArray.hpp"
 
-// The same setup as in blinky example, with differnt app_start. 
+// The same setup as in blinky example, with different app_start. 
 
 uint32_t timerInputFrequency = F_CPU;
 uint32_t timerCounterBits = 16;

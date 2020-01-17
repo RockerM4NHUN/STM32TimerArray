@@ -16,5 +16,4 @@ If you are experienced with the STM32 HAL environment and with writing setup cod
 - Copy the contents of *delay_change.cpp* to *src/app.cpp* in your project.
 - Click PlatformIO Upload.
 - The user LED should flash with changing frequency.
-- Note the comments on changing the timer delay, depending on your usecase outcames can vary.
-- See `advanced_delay_change` example for overcoming phenomena emerging from delay changes.
+- Note the comments on changing the timer delay.

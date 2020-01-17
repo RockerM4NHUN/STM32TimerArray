@@ -18,10 +18,11 @@ The library works with the `TimerArrayControl` class handling the hardware and `
 - *Planned Version 0.5.0*\
   New implementation to support every STM32 timer using only the counter register and Update events.
 
-- *Planned Version 0.4.2*\
-  API change: changeTimerDelay function is now correct instead of keeping synchrony (see advanced_delay_change example of previous version).
+- **@ Version 0.4.2**\
+  API change: changeTimerDelay function is now correct instead of keeping synchrony.\
+  TimerArrayControl sleep function.
   
-- **@ Version 0.4.1**\
+- Version 0.4.1\
   Bugfix: tick of empty controller missed pointer check.
   
 - Version 0.4.0\

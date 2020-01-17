@@ -12,12 +12,20 @@ The library works with the `TimerArrayControl` class handling the hardware and `
 
 ## Versions
 - *Planned Version 1.0.0*\
-  Examples for all functionality. Proper documentation of API.
+  Examples for all functionality.\
+  Stable API with proper documentation.
   
 - *Planned Version 0.5.0*\
-  New implementation to support every STM32 timer.
+  New implementation to support every STM32 timer using only the counter register and Update events.
+
+- **@ Version 0.4.2**\
+  API change: changeTimerDelay function is now correct instead of keeping synchrony.\
+  TimerArrayControl sleep function.
   
-- **@ Version 0.4.0**\
+- Version 0.4.1\
+  Bugfix: tick of empty controller missed pointer check.
+  
+- Version 0.4.0\
   Refactor of TimerArrayControl. Unit tests. New manual fire and query functions.
   
 - Version 0.3.0\

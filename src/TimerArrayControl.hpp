@@ -63,7 +63,6 @@ protected:
 
         TimerFeed(TIM_HandleTypeDef *const htim, const uint8_t bits);
         Timer* findTimerInsertionLink(Timer* it, Timer* timer);
-        Timer* findTimerInsertionLink(Timer* timer);
         void insertTimer(Timer* it, Timer* timer);
         void insertTimer(Timer* timer);
         void removeTimer(Timer* timer);

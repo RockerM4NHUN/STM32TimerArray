@@ -33,10 +33,6 @@ Timer* TimerArrayControl::TimerFeed::findTimerInsertionLink(Timer* it, Timer* ti
     return it;
 }
 
-Timer* TimerArrayControl::TimerFeed::findTimerInsertionLink(Timer* timer){
-    return findTimerInsertionLink(&root, timer);
-}
-
 // insert timer after the iterator
 void TimerArrayControl::TimerFeed::insertTimer(Timer* it, Timer* timer){
     

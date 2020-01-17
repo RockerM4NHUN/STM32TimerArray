@@ -5,8 +5,8 @@
 // but this way multiple callback handlers for the same interrupt
 // routine can exist independently, without requiring rewriting
 // the function for the current setup at all times
-void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim){
-    TIM_OC_DelayElapsed_CallbackChain::fire(htim);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
+    TIM_PeriodElapsed_CallbackChain::fire(htim);
 }
 
 #define __HAL_IS_TIMER_ENABLED(htim) (htim->Instance->CR1 & TIM_CR1_CEN)
@@ -21,8 +21,31 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim){
 TimerArrayControl::TimerFeed::TimerFeed(TIM_HandleTypeDef *const htim, const uint8_t bits) :
     root(nullptr),
     htim(htim),
-    bits(bits)
+    bits(bits),
+    cnt(0)
 {}
+
+void TimerArrayControl::TimerFeed::scheduleInterrupt(uint32_t target){
+    const auto tim = htim->Instance;
+    const uint32_t diff = max_count & ((uint32_t)(target - cnt)); // compute in modulo of counter
+    
+    // change the period very quickly and take into account the time already passed since CNT reset
+    const uint32_t passed = tim->CNT;
+    tim->CNT = 0; // should be before ARR is written, in case of inversion
+    tim->ARR = diff - passed; // modulo arithmetic is hopefully not needed (should make sure somehow)
+
+    // update timerFeed counter
+    cnt = max_count & ((uint32_t)(cnt + passed));
+}
+
+void TimerArrayControl::TimerFeed::updateTime(){
+    const auto tim = htim->Instance;
+    const uint32_t diff = tim->ARR - tim->CNT;
+    const uint32_t passed = tim->CNT;
+    tim->CNT = 0;
+    tim->ARR = diff;
+    cnt = max_count & ((uint32_t)(cnt + passed));
+}
 
 Timer* TimerArrayControl::TimerFeed::findTimerInsertionLink(Timer* it, Timer* timer){
     while(it->next && isSooner(it->next->target, timer->target)){
@@ -42,12 +65,15 @@ void TimerArrayControl::TimerFeed::insertTimer(Timer* it, Timer* timer){
     it->next = timer;
 
     // if the first timer changed, adjust interrupt target
-    if (root.next == timer) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, timer->target);
+    if (root.next == timer) scheduleInterrupt(timer->target);
 }
 
 // insert timer based on target
 void TimerArrayControl::TimerFeed::insertTimer(Timer* timer){
-    insertTimer(findTimerInsertionLink(&root, timer), timer);
+    insertTimer(
+        findTimerInsertionLink(&root, timer),
+        timer
+    );
 }
 
 // remove timer from feed
@@ -62,7 +88,7 @@ void TimerArrayControl::TimerFeed::removeTimer(Timer* timer){
     }
 
     // if the removed timer was the first in the feed, update interrupt target
-    if (&root == it && root.next) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, root.next->target);
+    if (&root == it && root.next) scheduleInterrupt(root.next->target);
 }
 
 // remove and insert timer in one operation, according to it's target
@@ -104,16 +130,12 @@ void TimerArrayControl::TimerFeed::updateTimerTarget(Timer* timer, uint32_t targ
     // If both, the first timers target was probably changed.
     // In all cases new target is needed.
     if (&root == ins || &root == rem) {
-        __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, root.next->target);
+        scheduleInterrupt(root.next->target);
     }
 }
 
 bool TimerArrayControl::TimerFeed::isSooner(uint32_t target, uint32_t reference){
     return (max_count & ((uint32_t)(target - cnt))) < (max_count & ((uint32_t)(reference - cnt)));
-}
-
-void TimerArrayControl::TimerFeed::updateTime(){
-    cnt = __HAL_TIM_GET_COUNTER(htim);
 }
 
 uint32_t TimerArrayControl::TimerFeed::calculateNextFireInSync(uint32_t target, uint32_t delay) const{
@@ -142,27 +164,22 @@ TimerArrayControl::TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32
 void TimerArrayControl::begin(){
 
     // stop timer if it was running
-    HAL_TIM_OC_Stop_IT(timerFeed.htim, TARGET_CC_CHANNEL);
+    HAL_TIM_Base_Stop_IT(timerFeed.htim);
+
+    uint32_t cnt = __HAL_TIM_GET_COUNTER(timerFeed.htim);
+    uint32_t target = timerFeed.root.next == nullptr ? (timerFeed.max_count & (cnt-1)) : timerFeed.root.next->target;
 
     timerFeed.htim->Init.CounterMode = TIM_COUNTERMODE_UP; // all STM32 counters support it
     timerFeed.htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE; // by disabling, write to ARR shadow regs happens immedietely
-    timerFeed.htim->Init.Period = timerFeed.max_count; // set max period for maximum amount of possible delay
+    timerFeed.htim->Init.Period = target; // set max period for maximum amount of possible delay
     timerFeed.htim->Init.Prescaler = prescaler - 1; // prescaler divides clock by Prescaler+1
-
-    TIM_OC_InitTypeDef oc_init;
-    oc_init.OCMode = TIM_OCMODE_TIMING;
-
-    HAL_TIM_OC_Init(timerFeed.htim);
-    HAL_TIM_OC_ConfigChannel(timerFeed.htim, &oc_init, TARGET_CC_CHANNEL);
-    uint32_t cnt = __HAL_TIM_GET_COUNTER(timerFeed.htim);
-    uint32_t target = timerFeed.root.next == nullptr ? (timerFeed.max_count & (cnt-1)) : timerFeed.root.next->target;
-    __HAL_TIM_SET_COMPARE(timerFeed.htim, TARGET_CC_CHANNEL, target); // if no timers to fire yet, set max delay between unneeded interrupts
-    HAL_TIM_OC_Start_IT(timerFeed.htim, TARGET_CC_CHANNEL);
+    
+    HAL_TIM_Base_Start_IT(timerFeed.htim);
 }
 
 void TimerArrayControl::stop(){
     // stop timer if it was running
-    HAL_TIM_OC_Stop_IT(timerFeed.htim, TARGET_CC_CHANNEL);
+    HAL_TIM_Base_Stop_IT(timerFeed.htim);
 }
 
 /*
@@ -180,7 +197,12 @@ void TimerArrayControl::tick(){
 
     isTickOngoing = true;
 
-    timerFeed.cnt = __HAL_TIM_GET_COUNTER(timerFeed.htim);
+    // ARR was reached by CNT, add it to the current time
+    const auto tim = timerFeed.htim->Instance;
+    timerFeed.cnt = COUNTER_MODULO(timerFeed.cnt + tim->ARR);
+    tim->ARR = timerFeed.max_count; // prevent early fires before handler finished
+    
+    // some random value to handle overshoots for now
     static const auto CALLBACK_JITTER = 1000;
 
     // handle request
@@ -219,12 +241,12 @@ void TimerArrayControl::tick(){
 
         // set the new target
         uint32_t target = timerFeed.root.next == nullptr ? COUNTER_MODULO(timerFeed.cnt - 1) : timerFeed.root.next->target;
-        __HAL_TIM_SET_COMPARE(timerFeed.htim, TARGET_CC_CHANNEL, target);
+        timerFeed.scheduleInterrupt(target);
 
         // fire callback
         timer->fire();
 
-        // refetch the counter, could have changed significantly since the tick's start
+        // refetch the counter, could have changed significantly during timer's fire
         timerFeed.updateTime();
     }
 

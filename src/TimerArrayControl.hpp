@@ -11,8 +11,8 @@
 
 
 // Callback chain setup for HAL_TIM_OC_DelayElapsedCallback function
-struct TIM_OC_DelayElapsed_CallbackChainID{};
-using TIM_OC_DelayElapsed_CallbackChain = CallbackChain<TIM_OC_DelayElapsed_CallbackChainID, TIM_HandleTypeDef*>;
+struct TIM_PeriodElapsed_CallbackChainID{};
+using TIM_PeriodElapsed_CallbackChain = CallbackChain<TIM_PeriodElapsed_CallbackChainID, TIM_HandleTypeDef*>;
 
 
 // Implements timer controller for hardware handling,
@@ -26,7 +26,7 @@ using TIM_OC_DelayElapsed_CallbackChain = CallbackChain<TIM_OC_DelayElapsed_Call
 // bits: the number of bits in the counter register (16 or 32)
 // prescaler: minimum of 65536 and clkdiv, compare with clkdiv to find out if selected prescale is possible
 // fcnt: the actual counting frequency based on the settings and limitations
-class TimerArrayControl : TIM_OC_DelayElapsed_CallbackChain{
+class TimerArrayControl : TIM_PeriodElapsed_CallbackChain{
 public:
     TimerArrayControl(TIM_HandleTypeDef *const htim, const uint32_t fclk=F_CPU, const uint32_t clkdiv=F_CPU/10000, const uint8_t bits=16);
 
@@ -59,9 +59,12 @@ protected:
         TIM_HandleTypeDef *const htim;
         const uint8_t bits;
         const uint32_t max_count = (1 << bits) - 1;
-        uint32_t cnt; // current value of timer counter (saved to freeze while calculating)
+        uint32_t cnt; // current value of accumulated timer counter, should be updated before use
 
         TimerFeed(TIM_HandleTypeDef *const htim, const uint8_t bits);
+
+        void scheduleInterrupt(uint32_t target);
+
         Timer* findTimerInsertionLink(Timer* it, Timer* timer);
         void insertTimer(Timer* it, Timer* timer);
         void insertTimer(Timer* timer);

@@ -450,6 +450,8 @@ bool TimerArrayControl::isRunning() const{
 void TimerArrayControl::sleep(uint32_t ticks) const{
     if (!isRunning()) return;
 
+    while (true); // TODO: adapt to Update Event based functionality (create a Timer and wait while it is running)
+
     uint32_t prev = __HAL_TIM_GET_COUNTER(timerFeed.htim);
     uint32_t diff;
     while(1){

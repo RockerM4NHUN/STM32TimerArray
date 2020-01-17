@@ -18,7 +18,7 @@
  */
 
 // Test helpers, might be transferred to hwsetup
-static const auto TIM_IT_FLAG = TIM_IT_CC1;
+static const auto TIM_IT_FLAG = TIM_IT_UPDATE;
 static const uint32_t fclk = 72'000'000;
 static const uint32_t fcnt = 100'000; // above 100 kHz test numbers can be off by a few
 static const uint16_t clkdiv = fclk / fcnt;
@@ -26,13 +26,13 @@ static TimerArrayControl* hcontrol = nullptr;
 static bool timerFiredFlag;
 void timerFiredCallback(){ timerFiredFlag = true; }
 volatile uint8_t rwDummy;
-uint8_t idleOnDummy(){ return rwDummy; }
+uint8_t idleOnDummy(){ return rwDummy += 163; }
 
 // -----                                       -----
 // ----- Test callback and interrupt mechanism -----
 // -----                                       -----
 
-struct TestCallbackChainFire : TIM_OC_DelayElapsed_CallbackChain{
+struct TestCallbackChainFire : TIM_PeriodElapsed_CallbackChain{
     TIM_HandleTypeDef** handle;
     uint8_t* hflag;
     TestCallbackChainFire(TIM_HandleTypeDef** _handle, uint8_t* _hflag) : handle(_handle), hflag(_hflag) {}
@@ -46,14 +46,14 @@ void test_callback_chain_ctor_and_dtor(){
         TestCallbackChainFire obj(&testHandle, &testFlag);
         
         if (testFlag) TEST_FAIL_MESSAGE("Callback fired prematurely");
-        HAL_TIM_OC_DelayElapsedCallback(&htim2);
+        HAL_TIM_PeriodElapsedCallback(&htim2);
         if (!testFlag) TEST_FAIL_MESSAGE("Callback not fired");
 
         TEST_ASSERT_EQUAL_PTR(&htim2, testHandle);
     }
 
     testFlag = 0;
-    HAL_TIM_OC_DelayElapsedCallback(&htim2);
+    HAL_TIM_PeriodElapsedCallback(&htim2);
     if (testFlag) TEST_FAIL_MESSAGE("Callback fired after link is destroyed");
 }
 
@@ -168,7 +168,7 @@ void test_attach_timer_from_direct_call_01(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(100, false, timerFiredCallback);
 
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 234);
+    control.timerFeed.cnt = 234;
 
     control.attachTimer(&timer);
     TEST_ASSERT_TRUE(timer.running); // timer was attached and now running
@@ -195,7 +195,7 @@ void test_delay_change_from_direct_call_01(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(100, false, timerFiredCallback);
 
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 200);
+    control.timerFeed.cnt = 200;
     control.attachTimer(&timer); // attach before delay change
     // target should be 300
 
@@ -212,10 +212,10 @@ void test_attach_in_sync_from_direct_call_01(){
     Timer timer(100, false, timerFiredCallback);
     Timer reftimer(1000, false, timerFiredCallback);
 
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 200);
+    control.timerFeed.cnt = 200;
     control.attachTimer(&reftimer); // attach reference
 
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 270); // change time of second attach
+    control.timerFeed.cnt = 270; // change time of second attach
     control.attachTimerInSync(&timer, &reftimer);
     TEST_ASSERT_TRUE(timer.running); // the timer is running
     TEST_ASSERT_TRUE(reftimer.running); // the reference timer is running
@@ -245,7 +245,7 @@ void test_manual_fire_from_direct_call_02(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(100, true, timerFiredCallback);
 
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 20); // time when manual fire happens
+    control.timerFeed.cnt = 20; // time when manual fire happens
 
     TEST_ASSERT_FALSE(timerFiredFlag); // no premature fire
     control.manualFire(&timer);
@@ -262,7 +262,7 @@ void test_manual_fire_from_direct_call_03(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(100, false, timerFiredCallback);
 
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 20);
+    control.timerFeed.cnt = 20;
     control.attachTimer(&timer);
 
     TEST_ASSERT_FALSE(timerFiredFlag); // no premature fire
@@ -278,9 +278,9 @@ void test_manual_fire_from_direct_call_04(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(100, true, timerFiredCallback);
 
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 20);
+    control.timerFeed.cnt = 20;
     control.attachTimer(&timer);
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 50); // time when manual fire happens
+    control.timerFeed.cnt = 50; // time when manual fire happens
 
     TEST_ASSERT_FALSE(timerFiredFlag); // no premature fire
     control.manualFire(&timer);
@@ -303,7 +303,7 @@ void test_attach_timer_from_interrupt_call_01(){
     control.begin();
 
     // set cnt, to have a non-trivial target time for timer
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 234);
+    control.timerFeed.cnt = 234;
 
     control.attachTimer(&timer);
     idleOnDummy(); // dummy write, to give some time to interrupt generation before testing results
@@ -336,7 +336,7 @@ void test_delay_change_from_interrupt_call_01(){
     Timer timer(100, false, timerFiredCallback);
 
     control.begin();
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 200);
+    control.timerFeed.cnt = 200;
     control.attachTimer(&timer); // attach before delay change
     // target should be 300
 
@@ -356,10 +356,10 @@ void test_attach_in_sync_from_interrupt_call_01(){
     Timer reftimer(1000, false, timerFiredCallback);
 
     control.begin();
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 200);
+    control.timerFeed.cnt = 200;
     control.attachTimer(&reftimer); // attach reference
 
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 270); // change time of second attach
+    control.timerFeed.cnt = 270; // change time of second attach
     control.attachTimerInSync(&timer, &reftimer);
     idleOnDummy(); // dummy write, to give some time to interrupt generation before testing results
     
@@ -395,7 +395,7 @@ void test_manual_fire_from_interrupt_call_02(){
     Timer timer(100, true, timerFiredCallback);
 
     control.begin();
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 20); // time when manual fire happens
+    control.timerFeed.cnt = 20; // time when manual fire happens
 
     TEST_ASSERT_FALSE(timerFiredFlag); // no premature fire
     control.manualFire(&timer);
@@ -415,7 +415,7 @@ void test_manual_fire_from_interrupt_call_03(){
     Timer timer(100, false, timerFiredCallback);
 
     control.begin();
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 20);
+    control.timerFeed.cnt = 20;
     control.attachTimer(&timer);
 
     TEST_ASSERT_FALSE(timerFiredFlag); // no premature fire
@@ -434,9 +434,9 @@ void test_manual_fire_from_interrupt_call_04(){
     Timer timer(100, true, timerFiredCallback);
 
     control.begin();
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 20);
+    control.timerFeed.cnt = 20;
     control.attachTimer(&timer);
-    __HAL_TIM_SET_COUNTER(control.timerFeed.htim, 50); // time when manual fire happens
+    control.timerFeed.cnt = 50; // time when manual fire happens
 
     TEST_ASSERT_FALSE(timerFiredFlag); // no premature fire
     control.manualFire(&timer);
@@ -477,19 +477,19 @@ struct stats_t {
     uint32_t int_mindelay = -1; // wraparound to maximum value
     uint32_t int_maxdelay = 0;
 
-    void reset(TIM_HandleTypeDef* htim, uint32_t _period){
+    void reset(TimerArrayControl* hcontrol, uint32_t _period){
         period = _period;
         mindelay = -1;
         maxdelay = 0;
         int_mindelay = -1;
         int_maxdelay = 0;
         int_tick = period;
-        prevtick = __HAL_TIM_GET_COUNTER(htim);
+        prevtick = hcontrol->timerFeed.cnt;
         firsttick = prevtick;
     }
 
-    void update(TIM_HandleTypeDef* htim){
-        uint32_t tick = __HAL_TIM_GET_COUNTER(htim);
+    void update(TimerArrayControl* hcontrol){
+        uint32_t tick = hcontrol->timerFeed.cnt;
         uint32_t diff = timeDifference(tick, prevtick); // ticks since last callback
         uint32_t int_diff = int_tick + diff - period;
 
@@ -504,11 +504,11 @@ struct stats_t {
 } timingStats;
 
 void callbackTimingStats(){
-    timingStats.update(hcontrol->timerFeed.htim);
+    timingStats.update(hcontrol);
 }
 
 void callbackTimingStatsCtx(stats_t* stats){
-    stats->update(hcontrol->timerFeed.htim);
+    stats->update(hcontrol);
 }
 
 
@@ -525,7 +525,7 @@ void test_timing_accuracy_01(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(delay, true, callbackTimingStats);
 
-    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    timingStats.reset(hcontrol, delay); // reset stats
     control.attachTimer(&timer); // attach timer
     control.begin(); // start hardware timer
 
@@ -559,7 +559,7 @@ void test_timing_accuracy_02(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(delay, true, callbackTimingStats);
 
-    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    timingStats.reset(hcontrol, delay); // reset stats
     control.attachTimer(&timer); // attach timer
     control.begin(); // start hardware timer
 
@@ -593,7 +593,7 @@ void test_timing_accuracy_03(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(delay, true, callbackTimingStats);
 
-    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    timingStats.reset(hcontrol, delay); // reset stats
     control.attachTimer(&timer); // attach timer
     control.begin(); // start hardware timer
 
@@ -627,7 +627,7 @@ void test_timing_accuracy_04(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(delay, true, callbackTimingStats);
 
-    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    timingStats.reset(hcontrol, delay); // reset stats
     control.attachTimer(&timer); // attach timer
     control.begin(); // start hardware timer
 
@@ -661,7 +661,7 @@ void test_timing_accuracy_05(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(delay, true, callbackTimingStats);
 
-    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    timingStats.reset(hcontrol, delay); // reset stats
     control.attachTimer(&timer); // attach timer
     control.begin(); // start hardware timer
 
@@ -695,7 +695,7 @@ void test_timing_accuracy_06(){
     TimerArrayControl& control = *hcontrol;
     Timer timer(delay, true, callbackTimingStats);
 
-    timingStats.reset(control.timerFeed.htim, delay); // reset stats
+    timingStats.reset(hcontrol, delay); // reset stats
     control.attachTimer(&timer); // attach timer
     control.begin(); // start hardware timer
 
@@ -728,7 +728,7 @@ void test_timing_accuracy_07(){
 
     TimerArrayControl& control = *hcontrol;
     stats_t stats;
-    stats.reset(control.timerFeed.htim, delay);
+    stats.reset(hcontrol, delay);
     ContextTimer<stats_t> timer(delay, true, &stats, callbackTimingStatsCtx);
 
     control.attachTimer(&timer); // attach timer
@@ -766,11 +766,11 @@ void test_timing_accuracy_08(){
     TimerArrayControl& control = *hcontrol;
 
     stats_t stats100;
-    stats100.reset(control.timerFeed.htim, delay100);
+    stats100.reset(hcontrol, delay100);
     ContextTimer<stats_t> timer100(delay100, true, &stats100, callbackTimingStatsCtx);
 
     stats_t stats1000;
-    stats1000.reset(control.timerFeed.htim, delay1000);
+    stats1000.reset(hcontrol, delay1000);
     ContextTimer<stats_t> timer1000(delay1000, true, &stats1000, callbackTimingStatsCtx);
 
     control.attachTimer(&timer100);
@@ -818,13 +818,13 @@ void test_timing_accuracy_09(){
 
     control.begin(); // start hardware timer
     
-    timingStats.reset(control.timerFeed.htim, delay);
+    timingStats.reset(hcontrol, delay);
     uint32_t time = HAL_GetTick();
     uint32_t cycles = 0;
 
     while(HAL_GetTick() - time < 1000){
         control.sleep(delay);
-        timingStats.update(control.timerFeed.htim);
+        timingStats.update(hcontrol);
         ++cycles;
     }
 
@@ -858,13 +858,13 @@ void test_timing_accuracy_10(){
 
     control.begin(); // start hardware timer
     
-    timingStats.reset(control.timerFeed.htim, delay);
+    timingStats.reset(hcontrol, delay);
     uint32_t time = HAL_GetTick();
     uint32_t cycles = 0;
 
     while(HAL_GetTick() - time < 1000){
         control.sleep(delay);
-        timingStats.update(control.timerFeed.htim);
+        timingStats.update(hcontrol);
         ++cycles;
     }
 

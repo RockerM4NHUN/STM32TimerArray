@@ -324,7 +324,7 @@ void TimerArrayControl::attachTimer(Timer* timer){
         request = ATTACH;
         
         // generate interrupt to register attached timer
-        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);
+        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_IG_FLAG);
 
         // don't wait for attach to happen, the interrupt will handle it very quickly
     } else {
@@ -345,7 +345,7 @@ void TimerArrayControl::detachTimer(Timer* timer){
         request = DETACH;
         
         // generate interrupt to register detached timer
-        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);
+        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_IG_FLAG);
 
         // don't wait for detach to happen, the interrupt will handle it very quickly
     } else {
@@ -369,7 +369,7 @@ void TimerArrayControl::changeTimerDelay(Timer* timer, uint32_t delay){
         request = DELAY_CHANGE;
 
         // generate interrupt to register delay change timer
-        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);
+        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_IG_FLAG);
 
         // don't wait for delay change to happen, the interrupt will handle it very quickly
     } else {
@@ -393,7 +393,7 @@ void TimerArrayControl::attachTimerInSync(Timer* timer, Timer* reference){
         request = ATTACH_SYNC;
         
         // generate interrupt to register attached timer
-        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);
+        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_IG_FLAG);
 
         // don't wait for attach to happen, the interrupt will handle it very quickly
     } else {
@@ -413,7 +413,7 @@ void TimerArrayControl::manualFire(Timer* timer){
         request = MANUAL_FIRE;
         
         // generate interrupt to register manual fire 
-        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_CCIG_FLAG);
+        __HAL_GENERATE_INTERRUPT(timerFeed.htim, TARGET_IG_FLAG);
 
         // don't wait for it to happen, the interrupt will handle it very quickly
     } else {

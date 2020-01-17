@@ -68,7 +68,7 @@ protected:
         void insertTimer(Timer* it, Timer* timer);
         void insertTimer(Timer* timer);
         void removeTimer(Timer* timer);
-        void updateTarget(Timer* timer, uint32_t target);
+        void updateTimerTarget(Timer* timer, uint32_t target);
 
         // check if target comes sooner than reference if we are at cnt
         bool isSooner(uint32_t target, uint32_t reference);

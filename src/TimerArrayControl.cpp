@@ -70,7 +70,7 @@ void TimerArrayControl::TimerFeed::removeTimer(Timer* timer){
 }
 
 // remove and insert timer in one operation, according to it's target
-void TimerArrayControl::TimerFeed::updateTarget(Timer* timer, uint32_t target){
+void TimerArrayControl::TimerFeed::updateTimerTarget(Timer* timer, uint32_t target){
     
     // find fitting place for timer in string
     Timer* ins = &root;
@@ -211,7 +211,7 @@ void TimerArrayControl::tick(){
             target &= timerFeed.max_count;
 
             // find fitting place for timer in string
-            timerFeed.updateTarget(timer, target);
+            timerFeed.updateTimerTarget(timer, target);
 
         } else {
             // if timer is not periodic, it is done, we can detach it
@@ -275,7 +275,7 @@ void TimerArrayControl::registerDelayChange(Timer* timer, uint32_t delay){
     timer->_delay = delay;
 
     // update the position of timer in the feed
-    timerFeed.updateTarget(timer, target);
+    timerFeed.updateTimerTarget(timer, target);
 }
 
 void TimerArrayControl::registerAttachedTimerInSync(Timer* timer, Timer* reference){

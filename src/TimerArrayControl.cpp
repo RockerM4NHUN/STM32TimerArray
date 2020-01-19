@@ -12,6 +12,8 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim){
 #define __HAL_IS_TIMER_ENABLED(htim) (htim->Instance->CR1 & TIM_CR1_CEN)
 #define __HAL_GENERATE_INTERRUPT(htim, EGR_FLAG) (htim->Instance->EGR |= EGR_FLAG)
 #define COUNTER_MODULO(x) (timerFeed.max_count & ((uint32_t)(x)))
+#define DISABLE_INTERRUPT() (__HAL_TIM_DISABLE_IT(timerFeed.htim, TIM_IT_CC1))
+#define ENABLE_INTERRUPT() (__HAL_TIM_ENABLE_IT(timerFeed.htim, TIM_IT_CC1))
 
 
 // -----                            -----

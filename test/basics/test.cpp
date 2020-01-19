@@ -34,7 +34,6 @@ void test_timer_array_control_constructor(){
     TEST_ASSERT_EQUAL(133, control.clkdiv);
     TEST_ASSERT_EQUAL(20, control.timerFeed.bits);
     TEST_ASSERT_EQUAL_PTR(0x1234, control.timerFeed.htim);
-    TEST_ASSERT_EQUAL(TimerArrayControl::Request::NONE, control.request);
     TEST_ASSERT_FALSE(control.isTickOngoing);
 
     // other request variables can be ignored, they will be overwritten

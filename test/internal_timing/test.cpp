@@ -87,78 +87,6 @@ void test_interrupt_blocking_of_request(){
     }
 }
 
-// -----                               -----
-// ----- Test API request registration -----
-// -----                               -----
-
-void test_attach_request_registration(){
-    
-    TimerArrayControl& control = *hcontrol;
-    Timer timer(100, false, timerFiredCallback);
-
-    control.begin();
-    __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_FLAG); // disable timer interrupt, to prevent tick
-
-    control.attachTimer(&timer);
-    TEST_ASSERT_EQUAL(TimerArrayControl::ATTACH, control.request);
-    TEST_ASSERT_EQUAL_PTR(&timer, control.requestTimer);
-}
-
-void test_detach_request_registration(){
-    
-    TimerArrayControl& control = *hcontrol;
-    Timer timer(100, false, timerFiredCallback);
-
-    control.begin();
-    __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_FLAG); // disable timer interrupt, to prevent tick
-
-    control.detachTimer(&timer);
-    TEST_ASSERT_EQUAL(TimerArrayControl::DETACH, control.request);
-    TEST_ASSERT_EQUAL_PTR(&timer, control.requestTimer);
-}
-
-void test_delay_change_request_registration(){
-    
-    TimerArrayControl& control = *hcontrol;
-    Timer timer(100, false, timerFiredCallback);
-
-    control.begin();
-    __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_FLAG); // disable timer interrupt, to prevent tick
-
-    control.changeTimerDelay(&timer, 123);
-    TEST_ASSERT_EQUAL(TimerArrayControl::DELAY_CHANGE, control.request);
-    TEST_ASSERT_EQUAL_PTR(&timer, control.requestTimer);
-    TEST_ASSERT_EQUAL(123, control.requestDelay);
-}
-
-void test_attach_in_sync_request_registration(){
-    
-    TimerArrayControl& control = *hcontrol;
-    Timer timer(100, false, timerFiredCallback);
-    Timer reftimer(100, false, timerFiredCallback);
-
-    control.begin();
-    __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_FLAG); // disable timer interrupt, to prevent tick
-
-    control.attachTimerInSync(&timer, &reftimer);
-    TEST_ASSERT_EQUAL(TimerArrayControl::ATTACH_SYNC, control.request);
-    TEST_ASSERT_EQUAL_PTR(&timer, control.requestTimer);
-    TEST_ASSERT_EQUAL_PTR(&reftimer, control.requestReferenceTimer);
-}
-
-void test_manual_fire_request_registration(){
-    
-    TimerArrayControl& control = *hcontrol;
-    Timer timer(100, false, timerFiredCallback);
-
-    control.begin();
-    __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_FLAG); // disable timer interrupt, to prevent tick
-
-    control.manualFire(&timer);
-    TEST_ASSERT_EQUAL(TimerArrayControl::MANUAL_FIRE, control.request);
-    TEST_ASSERT_EQUAL_PTR(&timer, control.requestTimer);
-}
-
 // -----                                             -----
 // ----- Test API request handling from direct calls -----
 // -----                                             -----
@@ -1017,13 +945,6 @@ int main() {
     // Test callback and interrupt mechanism
     RUN_TEST(test_interrupt_blocking_of_request);
     RUN_TEST(test_callback_chain_ctor_and_dtor);
-
-    // Test API request registration
-    RUN_TEST(test_attach_request_registration);
-    RUN_TEST(test_detach_request_registration);
-    RUN_TEST(test_delay_change_request_registration);
-    RUN_TEST(test_attach_in_sync_request_registration);
-    RUN_TEST(test_manual_fire_request_registration);
 
     // Test API request handling from direct calls
     RUN_TEST(test_attach_timer_from_direct_call_01);

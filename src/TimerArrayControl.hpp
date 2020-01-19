@@ -45,8 +45,6 @@ public:
     float actualTickFrequency() const;
     bool isRunning() const;
 
-    static const auto TARGET_CC_CHANNEL = TIM_CHANNEL_1;
-    static const auto TARGET_CCIG_FLAG = TIM_EGR_CC1G;
     static const uint8_t prescaler_bits = 16;
     static const auto max_prescale = (1 << prescaler_bits);
 

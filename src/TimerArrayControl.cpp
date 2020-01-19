@@ -9,11 +9,14 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim){
     TIM_OC_DelayElapsed_CallbackChain::fire(htim);
 }
 
+#define TARGET_CC_CHANNEL (TIM_CHANNEL_1)
 #define __HAL_IS_TIMER_ENABLED(htim) (htim->Instance->CR1 & TIM_CR1_CEN)
-#define __HAL_GENERATE_INTERRUPT(htim, EGR_FLAG) (htim->Instance->EGR |= EGR_FLAG)
+#define __HAL_GENERATE_INTERRUPT(htim, EGR_FLAG) (htim->Instance->EGR |= TIM_EGR_CC1G)
 #define COUNTER_MODULO(x) (timerFeed.max_count & ((uint32_t)(x)))
 #define DISABLE_INTERRUPT() (__HAL_TIM_DISABLE_IT(timerFeed.htim, TIM_IT_CC1))
 #define ENABLE_INTERRUPT() (__HAL_TIM_ENABLE_IT(timerFeed.htim, TIM_IT_CC1))
+#define SET_TARGET(val) (__HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, val))
+#define GET_TARGET(val) (__HAL_TIM_GET_COMPARE(htim, TARGET_CC_CHANNEL))
 
 
 // -----                            -----
@@ -44,7 +47,7 @@ void TimerArrayControl::TimerFeed::insertTimer(Timer* it, Timer* timer){
     it->next = timer;
 
     // if the first timer changed, adjust interrupt target
-    if (root.next == timer) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, timer->target);
+    if (root.next == timer) SET_TARGET(timer->target);
 }
 
 // insert timer based on target
@@ -64,7 +67,7 @@ void TimerArrayControl::TimerFeed::removeTimer(Timer* timer){
     }
 
     // if the removed timer was the first in the feed, update interrupt target
-    if (&root == it && root.next) __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, root.next->target);
+    if (&root == it && root.next) SET_TARGET(root.next->target);
 }
 
 // remove and insert timer in one operation, according to it's target
@@ -106,7 +109,7 @@ void TimerArrayControl::TimerFeed::updateTimerTarget(Timer* timer, uint32_t targ
     // If both, the first timers target was probably changed.
     // In all cases new target is needed.
     if (&root == ins || &root == rem) {
-        __HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, root.next->target);
+        SET_TARGET(root.next->target);
     }
 }
 

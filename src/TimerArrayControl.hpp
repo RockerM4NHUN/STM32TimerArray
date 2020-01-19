@@ -86,21 +86,6 @@ protected:
     void chainedCallback(TIM_HandleTypeDef*);
 
     TimerFeed timerFeed;
-
-    // the request variable has to be atomic RW, bytes achieve that
-    enum Request : uint8_t {
-        NONE = 0,
-        ATTACH,
-        DETACH,
-        DELAY_CHANGE,
-        ATTACH_SYNC,
-        MANUAL_FIRE
-    };
-
-    volatile Request request;
-    Timer* requestTimer;
-    Timer* requestReferenceTimer;
-    uint32_t requestDelay;
     volatile bool isTickOngoing;
 };
 

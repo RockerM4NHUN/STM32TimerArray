@@ -249,6 +249,170 @@ void test_3_timers_almost_in_sync_1sec(){
     );
 }
 
+void test_3_timers_in_perfect_sync_1min(){
+    // 100 kHz period
+    const uint32_t delay =  fcnt/100'000;
+
+    // timing tolerances (on a >= 200kHz clock)
+    TEST_ASSERT_GREATER_OR_EQUAL(200'000, fcnt);
+    const uint32_t acceptable_earlyness_ticks = 15;
+    const uint32_t acceptable_lateness_ticks = 15;
+    const uint32_t acceptable_integral_earlyness_ticks = 15;
+    const uint32_t acceptable_integral_lateness_ticks = 15;
+
+    TimerArrayControl& control = *hcontrol;
+    stats_t stats1;
+    stats_t stats2;
+    stats_t stats3;
+    ContextTimer<stats_t> timer1(delay, true, &stats1, callbackTimingStatsCtx);
+    ContextTimer<stats_t> timer2(delay, true, &stats2, callbackTimingStatsCtx);
+    ContextTimer<stats_t> timer3(delay, true, &stats3, callbackTimingStatsCtx);
+
+    stats1.reset(control.timerFeed.htim, delay); // reset stats
+    stats2.reset(control.timerFeed.htim, delay); // reset stats
+    stats3.reset(control.timerFeed.htim, delay); // reset stats
+    control.attachTimer(&timer1); // attach timer
+    control.attachTimer(&timer2); // attach timer
+    control.attachTimer(&timer3); // attach timer
+    control.begin(); // start hardware timer
+
+    HAL_Delay(60'000); // accumulate results
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - stats1.mindelay); UnityPrint(",");
+    UnityPrintNumber(stats1.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - stats1.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(stats1.int_maxdelay - delay); UnityPrint("|");
+    
+    UnityPrintNumber(delay - stats2.mindelay); UnityPrint(",");
+    UnityPrintNumber(stats2.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - stats2.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(stats2.int_maxdelay - delay); UnityPrint("|");
+    
+    UnityPrintNumber(delay - stats3.mindelay); UnityPrint(",");
+    UnityPrintNumber(stats3.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - stats3.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(stats3.int_maxdelay - delay); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - stats1.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, stats1.maxdelay - delay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - stats1.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, stats1.int_maxdelay - delay);
+    
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - stats2.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, stats2.maxdelay - delay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - stats2.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, stats2.int_maxdelay - delay);
+    
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - stats3.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, stats3.maxdelay - delay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - stats3.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, stats3.int_maxdelay - delay);
+    
+    TEST_ASSERT_NOT_NULL(control.timerFeed.root.next);
+
+    uint32_t time_sum = 0;
+    Timer* t1 = control.timerFeed.root.next;
+    Timer* t2 = t1->next;
+    while(t2){
+        time_sum += timeDifference(t2->target, t1->target);
+        UnityPrintNumber(t1->target); UnityPrint(" ");
+        t1 = t2;
+        t2 = t2->next;
+    }
+    UnityPrintNumber(t1->target); UnityPrint(" ");
+
+    TEST_ASSERT_LESS_OR_EQUAL_MESSAGE(
+        65535,
+        time_sum,
+        "targets in 'timers' array is not monotone increasing"
+    );
+}
+
+
+void test_3_timers_almost_in_sync_1min(){
+    // 100 kHz period
+    const uint32_t delay =  fcnt/100'000;
+
+    // timing tolerances (on a >= 200kHz clock)
+    TEST_ASSERT_GREATER_OR_EQUAL(200'000, fcnt);
+    const uint32_t acceptable_earlyness_ticks = 15;
+    const uint32_t acceptable_lateness_ticks = 15;
+    const uint32_t acceptable_integral_earlyness_ticks = 15;
+    const uint32_t acceptable_integral_lateness_ticks = 15;
+
+    TimerArrayControl& control = *hcontrol;
+    stats_t stats1;
+    stats_t stats2;
+    stats_t stats3;
+    ContextTimer<stats_t> timer1(delay, true, &stats1, callbackTimingStatsCtx);
+    ContextTimer<stats_t> timer2(delay+1, true, &stats2, callbackTimingStatsCtx);
+    ContextTimer<stats_t> timer3(delay-1, true, &stats3, callbackTimingStatsCtx);
+
+    stats1.reset(control.timerFeed.htim, delay); // reset stats
+    stats2.reset(control.timerFeed.htim, delay+1); // reset stats
+    stats3.reset(control.timerFeed.htim, delay-1); // reset stats
+    control.attachTimer(&timer1); // attach timer
+    control.attachTimer(&timer2); // attach timer
+    control.attachTimer(&timer3); // attach timer
+    control.begin(); // start hardware timer
+
+    HAL_Delay(60'000); // accumulate results
+
+    control.stop(); // stop interrupt generation
+    
+    UnityPrintNumber(delay - stats1.mindelay); UnityPrint(",");
+    UnityPrintNumber(stats1.maxdelay - delay); UnityPrint(",");
+    UnityPrintNumber(delay - stats1.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(stats1.int_maxdelay - delay); UnityPrint("|");
+    
+    UnityPrintNumber((delay+1) - stats2.mindelay); UnityPrint(",");
+    UnityPrintNumber(stats2.maxdelay - (delay+1)); UnityPrint(",");
+    UnityPrintNumber((delay+1) - stats2.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(stats2.int_maxdelay - (delay+1)); UnityPrint("|");
+    
+    UnityPrintNumber((delay-1) - stats3.mindelay); UnityPrint(",");
+    UnityPrintNumber(stats3.maxdelay - (delay-1)); UnityPrint(",");
+    UnityPrintNumber((delay-1) - stats3.int_mindelay); UnityPrint(",");
+    UnityPrintNumber(stats3.int_maxdelay - (delay-1)); UnityPrint(" ");
+    
+    // evaluate results
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - stats1.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, stats1.maxdelay - delay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, delay - stats1.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, stats1.int_maxdelay - delay);
+    
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, (delay+1) - stats2.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, stats2.maxdelay - (delay+1));
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, (delay+1) - stats2.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, stats2.int_maxdelay - (delay+1));
+    
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, (delay-1) - stats3.mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_lateness_ticks, stats3.maxdelay - (delay-1));
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_earlyness_ticks, (delay-1) - stats3.int_mindelay);
+    TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, stats3.int_maxdelay - (delay-1));
+    
+    TEST_ASSERT_NOT_NULL(control.timerFeed.root.next);
+
+    uint32_t time_sum = 0;
+    Timer* t1 = control.timerFeed.root.next;
+    Timer* t2 = t1->next;
+    while(t2){
+        time_sum += timeDifference(t2->target, t1->target);
+        UnityPrintNumber(t1->target); UnityPrint(" ");
+        t1 = t2;
+        t2 = t2->next;
+    }
+    UnityPrintNumber(t1->target); UnityPrint(" ");
+
+    TEST_ASSERT_LESS_OR_EQUAL_MESSAGE(
+        65535,
+        time_sum,
+        "targets in 'timers' array is not monotone increasing"
+    );
+}
 
 // -----                -----
 // ----- Test execution -----
@@ -278,8 +442,8 @@ int main() {
     RUN_TEST(test_3_timers_almost_in_sync_1sec);
 
     // 1 minute tests
-    //RUN_TEST(test_3_timers_in_perfect_sync_1min);
-    //RUN_TEST(test_3_timers_almost_in_sync_1min);
+    RUN_TEST(test_3_timers_in_perfect_sync_1min);
+    RUN_TEST(test_3_timers_almost_in_sync_1min);
 
     UNITY_END();
 

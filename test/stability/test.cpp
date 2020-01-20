@@ -89,15 +89,15 @@ void callbackTimingStatsCtx(stats_t* stats){
 }
 
 void test_3_timers_in_perfect_sync_1sec(){
-    // 100 kHz period
-    const uint32_t delay =  fcnt/100'000;
+    // 50 kHz period
+    const uint32_t delay = fcnt/50'000;
 
-    // timing tolerances (on a >= 200kHz clock)
-    TEST_ASSERT_GREATER_OR_EQUAL(200'000, fcnt);
-    const uint32_t acceptable_earlyness_ticks = 15;
-    const uint32_t acceptable_lateness_ticks = 15;
-    const uint32_t acceptable_integral_earlyness_ticks = 15;
-    const uint32_t acceptable_integral_lateness_ticks = 15;
+    // timing tolerances for a 1 MHz clock
+    TEST_ASSERT_GREATER_OR_EQUAL(1'000'000, fcnt);
+    const uint32_t acceptable_earlyness_ticks = 16;
+    const uint32_t acceptable_lateness_ticks = 16;
+    const uint32_t acceptable_integral_earlyness_ticks = 16;
+    const uint32_t acceptable_integral_lateness_ticks = 16;
 
     TimerArrayControl& control = *hcontrol;
     stats_t stats1;
@@ -115,7 +115,7 @@ void test_3_timers_in_perfect_sync_1sec(){
     control.attachTimer(&timer3); // attach timer
     control.begin(); // start hardware timer
 
-    HAL_Delay(1000); // accumulate results
+    control.sleep(1*fcnt); // sleep for 1 second
 
     control.stop(); // stop interrupt generation
     
@@ -133,6 +133,10 @@ void test_3_timers_in_perfect_sync_1sec(){
     UnityPrintNumber(stats3.maxdelay - delay); UnityPrint(",");
     UnityPrintNumber(delay - stats3.int_mindelay); UnityPrint(",");
     UnityPrintNumber(stats3.int_maxdelay - delay); UnityPrint(" ");
+
+    UnityPrintNumber(stats1.update_count); UnityPrint("|");
+    UnityPrintNumber(stats2.update_count); UnityPrint("|");
+    UnityPrintNumber(stats3.update_count); UnityPrint(" ");
     
     // evaluate results
     TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - stats1.mindelay);
@@ -152,13 +156,9 @@ void test_3_timers_in_perfect_sync_1sec(){
     
     TEST_ASSERT_NOT_NULL(control.timerFeed.root.next);
 
-    UnityPrintNumber(stats1.update_count); UnityPrint("|");
-    UnityPrintNumber(stats2.update_count); UnityPrint("|");
-    UnityPrintNumber(stats3.update_count); UnityPrint("|");
-
-    TEST_ASSERT_UINT32_WITHIN(10, fcnt/delay, stats1.update_count);
-    TEST_ASSERT_UINT32_WITHIN(10, fcnt/delay, stats2.update_count);
-    TEST_ASSERT_UINT32_WITHIN(10, fcnt/delay, stats3.update_count);
+    TEST_ASSERT_UINT32_WITHIN(3, fcnt/delay, stats1.update_count);
+    TEST_ASSERT_UINT32_WITHIN(3, fcnt/delay, stats2.update_count);
+    TEST_ASSERT_UINT32_WITHIN(3, fcnt/delay, stats3.update_count);
 
     uint32_t time_sum = 0;
     Timer* t1 = control.timerFeed.root.next;
@@ -180,15 +180,15 @@ void test_3_timers_in_perfect_sync_1sec(){
 
 
 void test_3_timers_almost_in_sync_1sec(){
-    // 100 kHz period
-    const uint32_t delay =  fcnt/100'000;
+    // 50 kHz period
+    const uint32_t delay =  fcnt/50'000;
 
-    // timing tolerances (on a >= 200kHz clock)
-    TEST_ASSERT_GREATER_OR_EQUAL(200'000, fcnt);
-    const uint32_t acceptable_earlyness_ticks = 15;
-    const uint32_t acceptable_lateness_ticks = 15;
-    const uint32_t acceptable_integral_earlyness_ticks = 15;
-    const uint32_t acceptable_integral_lateness_ticks = 15;
+    // timing tolerances for a 1 MHz clock
+    TEST_ASSERT_GREATER_OR_EQUAL(1'000'000, fcnt);
+    const uint32_t acceptable_earlyness_ticks = 16;
+    const uint32_t acceptable_lateness_ticks = 16;
+    const uint32_t acceptable_integral_earlyness_ticks = 16;
+    const uint32_t acceptable_integral_lateness_ticks = 16;
 
     TimerArrayControl& control = *hcontrol;
     stats_t stats1;
@@ -204,9 +204,12 @@ void test_3_timers_almost_in_sync_1sec(){
     control.attachTimer(&timer1); // attach timer
     control.attachTimer(&timer2); // attach timer
     control.attachTimer(&timer3); // attach timer
+    UnityPrintNumber(timer1.target); UnityPrint("|");
+    UnityPrintNumber(timer2.target); UnityPrint("|");
+    UnityPrintNumber(timer3.target); UnityPrint("|");
     control.begin(); // start hardware timer
 
-    HAL_Delay(1000); // accumulate results
+    control.sleep(1*fcnt); // sleep for 1 second
 
     control.stop(); // stop interrupt generation
     
@@ -224,6 +227,10 @@ void test_3_timers_almost_in_sync_1sec(){
     UnityPrintNumber(stats3.maxdelay - (delay-1)); UnityPrint(",");
     UnityPrintNumber((delay-1) - stats3.int_mindelay); UnityPrint(",");
     UnityPrintNumber(stats3.int_maxdelay - (delay-1)); UnityPrint(" ");
+
+    UnityPrintNumber(stats1.update_count); UnityPrint("|");
+    UnityPrintNumber(stats2.update_count); UnityPrint("|");
+    UnityPrintNumber(stats3.update_count); UnityPrint(" ");
     
     // evaluate results
     TEST_ASSERT_LESS_OR_EQUAL(acceptable_earlyness_ticks, delay - stats1.mindelay);
@@ -243,13 +250,9 @@ void test_3_timers_almost_in_sync_1sec(){
     
     TEST_ASSERT_NOT_NULL(control.timerFeed.root.next);
 
-    UnityPrintNumber(stats1.update_count); UnityPrint("|");
-    UnityPrintNumber(stats2.update_count); UnityPrint("|");
-    UnityPrintNumber(stats3.update_count); UnityPrint("|");
-
-    TEST_ASSERT_UINT32_WITHIN(10, fcnt/delay, stats1.update_count);
-    TEST_ASSERT_UINT32_WITHIN(10, fcnt/(delay+1), stats2.update_count);
-    TEST_ASSERT_UINT32_WITHIN(10, fcnt/(delay-1), stats3.update_count);
+    TEST_ASSERT_UINT32_WITHIN(3, fcnt/delay, stats1.update_count);
+    TEST_ASSERT_UINT32_WITHIN(3, fcnt/(delay+1), stats2.update_count);
+    TEST_ASSERT_UINT32_WITHIN(3, fcnt/(delay-1), stats3.update_count);
 
     uint32_t time_sum = 0;
     Timer* t1 = control.timerFeed.root.next;
@@ -441,7 +444,7 @@ void test_3_timers_almost_in_sync_1min(){
 void setUp(){
     hwsetup_internal_timing();
     timerFiredFlag = false;
-    hcontrol = new TimerArrayControl(&htim2, fclk, clkdiv, 16);
+    hcontrol = new TimerArrayControl(&htim2, fclk, clkdiv, 22);
 }
 
 void tearDown(){

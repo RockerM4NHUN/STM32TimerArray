@@ -49,6 +49,7 @@ struct stats_t {
     // limits of integral errors
     uint32_t int_mindelay = -1; // wraparound to maximum value
     uint32_t int_maxdelay = 0;
+    uint32_t update_count = 0;
 
     void reset(TIM_HandleTypeDef* htim, uint32_t _period){
         period = _period;
@@ -59,12 +60,15 @@ struct stats_t {
         int_tick = period;
         prevtick = __HAL_TIM_GET_COUNTER(htim);
         firsttick = prevtick;
+        update_count = 0;
     }
 
     void update(TIM_HandleTypeDef* htim){
         uint32_t tick = __HAL_TIM_GET_COUNTER(htim);
         uint32_t diff = timeDifference(tick, prevtick); // ticks since last callback
         uint32_t int_diff = int_tick + diff - period;
+
+        ++update_count;
 
         mindelay = mindelay > diff ? diff : mindelay;
         maxdelay = maxdelay < diff ? diff : maxdelay;
@@ -148,6 +152,14 @@ void test_3_timers_in_perfect_sync_1sec(){
     
     TEST_ASSERT_NOT_NULL(control.timerFeed.root.next);
 
+    UnityPrintNumber(stats1.update_count); UnityPrint("|");
+    UnityPrintNumber(stats2.update_count); UnityPrint("|");
+    UnityPrintNumber(stats3.update_count); UnityPrint("|");
+
+    TEST_ASSERT_UINT32_WITHIN(10, fcnt/delay, stats1.update_count);
+    TEST_ASSERT_UINT32_WITHIN(10, fcnt/delay, stats2.update_count);
+    TEST_ASSERT_UINT32_WITHIN(10, fcnt/delay, stats3.update_count);
+
     uint32_t time_sum = 0;
     Timer* t1 = control.timerFeed.root.next;
     Timer* t2 = t1->next;
@@ -230,6 +242,14 @@ void test_3_timers_almost_in_sync_1sec(){
     TEST_ASSERT_LESS_OR_EQUAL(acceptable_integral_lateness_ticks, stats3.int_maxdelay - (delay-1));
     
     TEST_ASSERT_NOT_NULL(control.timerFeed.root.next);
+
+    UnityPrintNumber(stats1.update_count); UnityPrint("|");
+    UnityPrintNumber(stats2.update_count); UnityPrint("|");
+    UnityPrintNumber(stats3.update_count); UnityPrint("|");
+
+    TEST_ASSERT_UINT32_WITHIN(10, fcnt/delay, stats1.update_count);
+    TEST_ASSERT_UINT32_WITHIN(10, fcnt/(delay+1), stats2.update_count);
+    TEST_ASSERT_UINT32_WITHIN(10, fcnt/(delay-1), stats3.update_count);
 
     uint32_t time_sum = 0;
     Timer* t1 = control.timerFeed.root.next;

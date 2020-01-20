@@ -17,7 +17,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim){
 #define ENABLE_INTERRUPT() (__HAL_TIM_ENABLE_IT(timerFeed.htim, TIM_IT_CC1))
 #define SET_TARGET(val) (__HAL_TIM_SET_COMPARE(htim, TARGET_CC_CHANNEL, val))
 #define GET_TARGET(val) (__HAL_TIM_GET_COMPARE(htim, TARGET_CC_CHANNEL))
-
+#define CALLBACK_JITTER 1000
 
 // -----                            -----
 // ----- TimerString implementation -----
@@ -121,6 +121,16 @@ void TimerArrayControl::TimerFeed::updateTime(){
     cnt = __HAL_TIM_GET_COUNTER(htim);
 }
 
+void TimerArrayControl::TimerFeed::updateTickTime(){
+    cnt = GET_TARGET();
+    uint32_t tim_cnt = __HAL_TIM_GET_COUNTER(htim);
+    
+    if ((max_count & ((uint32_t)(tim_cnt - cnt))) >= CALLBACK_JITTER){
+        // if CNT passed CCR more than the acceptable jitter, use the CNT value
+        cnt = tim_cnt;
+    }
+}
+
 uint32_t TimerArrayControl::TimerFeed::calculateNextFireInSync(uint32_t target, uint32_t delay) const{
     uint32_t diff = (max_count & ((uint32_t)(cnt - target)));
     uint32_t subt = diff - (diff/delay)*delay;
@@ -182,17 +192,7 @@ void TimerArrayControl::tick(){
 
     isTickOngoing = true;
 
-    timerFeed.cnt = __HAL_TIM_GET_COMPARE(timerFeed.htim, TARGET_CC_CHANNEL);
-    uint32_t tim_cnt = __HAL_TIM_GET_COUNTER(timerFeed.htim);
-    static const auto CALLBACK_JITTER = 1000; // for high frequency counting
-    
-    if (COUNTER_MODULO(tim_cnt - timerFeed.cnt) < CALLBACK_JITTER){
-        // if CNT just passed CCR, this is a genuine interrupt or happened because of idle controller
-        // leave the recorded exact interrupt time in timerFeed.cnt
-    } else {
-        // else the interrupt is a request, use the current time according to CNT
-        timerFeed.cnt = tim_cnt;
-    }
+    timerFeed.updateTickTime();
 
     // handle timeout
     while (timerFeed.root.next && COUNTER_MODULO(timerFeed.cnt - timerFeed.root.next->target) < CALLBACK_JITTER){
@@ -224,7 +224,7 @@ void TimerArrayControl::tick(){
         // fire callback
         timer->fire();
 
-        // don't update timerFeed cnt here!
+        timerFeed.updateTickTime();
     }
 
     isTickOngoing = false;

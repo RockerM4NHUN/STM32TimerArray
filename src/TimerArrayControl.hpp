@@ -74,6 +74,7 @@ protected:
         uint32_t calculateNextFireInSync(uint32_t target, uint32_t delay) const;
 
         void updateTime();
+        void updateTickTime();
     };
 
     void tick();

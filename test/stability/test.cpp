@@ -462,8 +462,8 @@ int main() {
     RUN_TEST(test_3_timers_almost_in_sync_1sec);
 
     // 1 minute tests
-    RUN_TEST(test_3_timers_in_perfect_sync_1min);
-    RUN_TEST(test_3_timers_almost_in_sync_1min);
+    // RUN_TEST(test_3_timers_in_perfect_sync_1min);
+    // RUN_TEST(test_3_timers_almost_in_sync_1min);
 
     UNITY_END();
 

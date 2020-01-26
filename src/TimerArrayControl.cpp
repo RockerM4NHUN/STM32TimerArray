@@ -202,9 +202,7 @@ void TimerArrayControl::tick(){
         if (timer->_periodic){
 
             // set new target for timer
-            uint32_t target = timer->target;
-            target += timer->_delay;
-            target &= timerFeed.max_count;
+            uint32_t target = COUNTER_MODULO(timer->target + timer->_delay);
 
             // find fitting place for timer in string
             timerFeed.updateTimerTarget(timer, target);

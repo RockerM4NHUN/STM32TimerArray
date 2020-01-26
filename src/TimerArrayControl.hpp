@@ -45,8 +45,6 @@ public:
     float actualTickFrequency() const;
     bool isRunning() const;
 
-    static const auto TARGET_CC_CHANNEL = TIM_CHANNEL_1;
-    static const auto TARGET_CCIG_FLAG = TIM_EGR_CC1G;
     static const uint8_t prescaler_bits = 16;
     static const auto max_prescale = (1 << prescaler_bits);
 
@@ -64,11 +62,10 @@ protected:
 
         TimerFeed(TIM_HandleTypeDef *const htim, const uint8_t bits);
         Timer* findTimerInsertionLink(Timer* it, Timer* timer);
-        Timer* findTimerInsertionLink(Timer* timer);
         void insertTimer(Timer* it, Timer* timer);
         void insertTimer(Timer* timer);
         void removeTimer(Timer* timer);
-        void updateTarget(Timer* timer, uint32_t target);
+        void updateTimerTarget(Timer* timer, uint32_t target);
 
         // check if target comes sooner than reference if we are at cnt
         bool isSooner(uint32_t target, uint32_t reference);
@@ -77,6 +74,7 @@ protected:
         uint32_t calculateNextFireInSync(uint32_t target, uint32_t delay) const;
 
         void updateTime();
+        void updateTickTime();
     };
 
     void tick();
@@ -89,21 +87,6 @@ protected:
     void chainedCallback(TIM_HandleTypeDef*);
 
     TimerFeed timerFeed;
-
-    // the request variable has to be atomic RW, bytes achieve that
-    enum Request : uint8_t {
-        NONE = 0,
-        ATTACH,
-        DETACH,
-        DELAY_CHANGE,
-        ATTACH_SYNC,
-        MANUAL_FIRE
-    };
-
-    volatile Request request;
-    Timer* requestTimer;
-    Timer* requestReferenceTimer;
-    uint32_t requestDelay;
     volatile bool isTickOngoing;
 };
 

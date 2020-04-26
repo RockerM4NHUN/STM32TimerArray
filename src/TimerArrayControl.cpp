@@ -389,6 +389,14 @@ void TimerArrayControl::manualFire(Timer* timer){
     }
 }
 
+void TimerArrayControl::disableInterrupt(){
+    DISABLE_INTERRUPT();
+}
+
+void TimerArrayControl::enableInterrupt(){
+    ENABLE_INTERRUPT();
+}
+
 
 bool TimerArrayControl::isRunning() const{
     return __HAL_IS_TIMER_ENABLED(timerFeed.htim);

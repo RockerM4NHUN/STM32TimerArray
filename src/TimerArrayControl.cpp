@@ -157,7 +157,9 @@ void TimerArrayControl::begin(){
     HAL_TIM_OC_Stop_IT(timerFeed.htim, TARGET_CC_CHANNEL);
 
     timerFeed.htim->Init.CounterMode = TIM_COUNTERMODE_UP; // all STM32 counters support it
+    #ifdef TIM_AUTORELOAD_PRELOAD_DISABLE  // not used by STM32F4
     timerFeed.htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE; // by disabling, write to ARR shadow regs happens immedietely
+    #endif
     timerFeed.htim->Init.Period = timerFeed.max_count; // set max period for maximum amount of possible delay
     timerFeed.htim->Init.Prescaler = prescaler - 1; // prescaler divides clock by Prescaler+1
 

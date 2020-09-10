@@ -1,6 +1,6 @@
 # STM32TimerArray
 To aid the user with hardware based programmable timers, this library provides a timer array implementation for the STM32 platform.\
-If any problem is encountered, please open an issue, or write an email.
+If any problem is encountered, please open an issue.
 
 Visit the [examples][examples_dir] folder to get started, [project_setup_with_cubemx][project_setup_with_cubemx_dir] is the recommended starting point.
 
@@ -19,7 +19,11 @@ The library works with the `TimerArrayControl` class handling the hardware and `
   New implementation to support every STM32 timer using only the counter register and Update events.\
   *Work did not start yet, contact me if you want to help.*
 
-- **@ Version 0.4.3 (Stable)**\
+- **@ Version 0.4.4 (Stable)**\
+  API change: interrupt control for user per TimerArrayControl.\
+  Fix for absent STM32F4 AutoReloadPreload definition.
+
+- Version 0.4.3\
   Requests handled by interrupt disabling approach instead of interrupt generation approach.\
   Stability tests.
   

@@ -46,6 +46,6 @@ The library works with the `TimerArrayControl` class handling the hardware and `
 - Version 0.1.0\
   Basic functionality exists.
 
-[examples_dir]: https://github.com/RockerM4NHUN/STM32TimerArray/blob/master/examples
-[project_setup_with_cubemx_dir]: https://github.com/RockerM4NHUN/STM32TimerArray/blob/master/examples/project_setup_with_cubemx
-[project_setup_with_hal_dir]: https://github.com/RockerM4NHUN/STM32TimerArray/blob/master/examples/project_setup_with_hal
+[examples_dir]: https://github.com/zomborid/STM32TimerArray/blob/master/examples
+[project_setup_with_cubemx_dir]: https://github.com/zomborid/STM32TimerArray/blob/master/examples/project_setup_with_cubemx
+[project_setup_with_hal_dir]: https://github.com/zomborid/STM32TimerArray/blob/master/examples/project_setup_with_hal

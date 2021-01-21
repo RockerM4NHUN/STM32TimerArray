@@ -6,13 +6,13 @@
   "repository":
   {
     "type": "git",
-    "url": "https://github.com/RockerM4NHUN/STM32TimerArray.git"
+    "url": "https://github.com/zomborid/STM32TimerArray.git"
   },
   "authors":
   {
     "name": "ZOMBORI Dániel",
     "email": "rockerm4nhun@gmail.com",
-    "url": "https://github.com/RockerM4NHUN",
+    "url": "https://github.com/zomborid",
     "maintainer": true
   },
   "version": "0.4.4",
